@@ -15,11 +15,15 @@ on:
   workflow_dispatch:
 
 env:
-  DOCKERHUB_USERNAME_VAR: ${{ secrets.DOCKERHUB_USERNAME }}
+  REGISTRY_GHCR: ghcr.io
+  REGISTRY_DOCKERHUB: docker.io
 
 jobs:
   build-backend:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -38,9 +42,17 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY_GHCR }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          
       - name: Login to DockerHub
         uses: docker/login-action@v3
         with:
+          registry: ${{ env.REGISTRY_DOCKERHUB }}
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
           
@@ -51,14 +63,20 @@ jobs:
       - name: Prepare Docker tags
         id: docker_tags
         run: |
-          IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}-backend"
+          # Convert repository name to lowercase for ghcr.io compatibility
+          REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          
+          # Define image names for both registries
+          GHCR_IMAGE="${{ env.REGISTRY_GHCR }}/${REPO_LOWER}-backend"
+          DOCKERHUB_IMAGE="${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}-backend"
+          
           TAGS=""
           
           echo "Processing ref_type: ${{ github.ref_type }}"
           echo "Processing ref: ${{ github.ref }}"
           echo "Processing ref_name: ${{ github.ref_name }}"
           
-          # Handle tagged releases first
+          # Handle tagged releases
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
             echo "Processing tag release"
             VERSION="${{ github.ref_name }}"
@@ -66,13 +84,13 @@ jobs:
             # Remove 'v' prefix if present for clean version tag
             if [[ $VERSION == v* ]]; then
               CLEAN_VERSION=${VERSION#v}
-              TAGS="$IMAGE_NAME:$CLEAN_VERSION,$IMAGE_NAME:$VERSION"
+              TAGS="$GHCR_IMAGE:$CLEAN_VERSION,$GHCR_IMAGE:$VERSION,$DOCKERHUB_IMAGE:$CLEAN_VERSION,$DOCKERHUB_IMAGE:$VERSION"
             else
-              TAGS="$IMAGE_NAME:$VERSION"
+              TAGS="$GHCR_IMAGE:$VERSION,$DOCKERHUB_IMAGE:$VERSION"
             fi
             
             # Always tag latest for version releases
-            TAGS="$TAGS,$IMAGE_NAME:latest"
+            TAGS="$TAGS,$GHCR_IMAGE:latest,$DOCKERHUB_IMAGE:latest"
             
             echo "Version tags: $TAGS"
             
@@ -82,27 +100,29 @@ jobs:
             
             # Add branch-specific tags
             if [[ "${{ github.ref_name }}" == "main" || "${{ github.ref_name }}" == "master" ]]; then
-              TAGS="$IMAGE_NAME:latest,$IMAGE_NAME:main"
+              TAGS="$GHCR_IMAGE:latest,$GHCR_IMAGE:main,$DOCKERHUB_IMAGE:latest,$DOCKERHUB_IMAGE:main"
             elif [[ "${{ github.ref_name }}" == "dev" ]]; then
-              TAGS="$IMAGE_NAME:dev"
+              TAGS="$GHCR_IMAGE:dev,$DOCKERHUB_IMAGE:dev"
             else
               # For other branches, use branch name (sanitized)
               BRANCH_NAME=$(echo "${{ github.ref_name }}" | sed 's/[^a-zA-Z0-9._-]/-/g')
-              TAGS="$IMAGE_NAME:$BRANCH_NAME"
+              TAGS="$GHCR_IMAGE:$BRANCH_NAME,$DOCKERHUB_IMAGE:$BRANCH_NAME"
             fi
             
             # Add SHA tag for branches
-            TAGS="$TAGS,$IMAGE_NAME:sha-${GITHUB_SHA::7}"
+            TAGS="$TAGS,$GHCR_IMAGE:sha-${GITHUB_SHA::7},$DOCKERHUB_IMAGE:sha-${GITHUB_SHA::7}"
           fi
           
           # Add date tag for all builds
-          TAGS="$TAGS,$IMAGE_NAME:${{ steps.date.outputs.date }}"
+          TAGS="$TAGS,$GHCR_IMAGE:${{ steps.date.outputs.date }},$DOCKERHUB_IMAGE:${{ steps.date.outputs.date }}"
           
           # Clean up any leading commas
           TAGS=$(echo "$TAGS" | sed 's/^,*//')
           
           echo "Final tags: $TAGS"
           echo "tags=$TAGS" >> $GITHUB_OUTPUT
+          echo "ghcr_image=$GHCR_IMAGE" >> $GITHUB_OUTPUT
+          echo "dockerhub_image=$DOCKERHUB_IMAGE" >> $GITHUB_OUTPUT
           
       - name: Build and push backend
         uses: docker/build-push-action@v5
@@ -116,6 +136,9 @@ jobs:
 
   build-frontend:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -134,9 +157,17 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY_GHCR }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          
       - name: Login to DockerHub
         uses: docker/login-action@v3
         with:
+          registry: ${{ env.REGISTRY_DOCKERHUB }}
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
           
@@ -147,14 +178,20 @@ jobs:
       - name: Prepare Docker tags
         id: docker_tags
         run: |
-          IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}-frontend"
+          # Convert repository name to lowercase for ghcr.io compatibility
+          REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          
+          # Define image names for both registries
+          GHCR_IMAGE="${{ env.REGISTRY_GHCR }}/${REPO_LOWER}-frontend"
+          DOCKERHUB_IMAGE="${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}-frontend"
+          
           TAGS=""
           
           echo "Processing ref_type: ${{ github.ref_type }}"
           echo "Processing ref: ${{ github.ref }}"
           echo "Processing ref_name: ${{ github.ref_name }}"
           
-          # Handle tagged releases first
+          # Handle tagged releases
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
             echo "Processing tag release"
             VERSION="${{ github.ref_name }}"
@@ -162,13 +199,13 @@ jobs:
             # Remove 'v' prefix if present for clean version tag
             if [[ $VERSION == v* ]]; then
               CLEAN_VERSION=${VERSION#v}
-              TAGS="$IMAGE_NAME:$CLEAN_VERSION,$IMAGE_NAME:$VERSION"
+              TAGS="$GHCR_IMAGE:$CLEAN_VERSION,$GHCR_IMAGE:$VERSION,$DOCKERHUB_IMAGE:$CLEAN_VERSION,$DOCKERHUB_IMAGE:$VERSION"
             else
-              TAGS="$IMAGE_NAME:$VERSION"
+              TAGS="$GHCR_IMAGE:$VERSION,$DOCKERHUB_IMAGE:$VERSION"
             fi
             
             # Always tag latest for version releases
-            TAGS="$TAGS,$IMAGE_NAME:latest"
+            TAGS="$TAGS,$GHCR_IMAGE:latest,$DOCKERHUB_IMAGE:latest"
             
             echo "Version tags: $TAGS"
             
@@ -178,27 +215,29 @@ jobs:
             
             # Add branch-specific tags
             if [[ "${{ github.ref_name }}" == "main" || "${{ github.ref_name }}" == "master" ]]; then
-              TAGS="$IMAGE_NAME:latest,$IMAGE_NAME:main"
+              TAGS="$GHCR_IMAGE:latest,$GHCR_IMAGE:main,$DOCKERHUB_IMAGE:latest,$DOCKERHUB_IMAGE:main"
             elif [[ "${{ github.ref_name }}" == "dev" ]]; then
-              TAGS="$IMAGE_NAME:dev"
+              TAGS="$GHCR_IMAGE:dev,$DOCKERHUB_IMAGE:dev"
             else
               # For other branches, use branch name (sanitized)
               BRANCH_NAME=$(echo "${{ github.ref_name }}" | sed 's/[^a-zA-Z0-9._-]/-/g')
-              TAGS="$IMAGE_NAME:$BRANCH_NAME"
+              TAGS="$GHCR_IMAGE:$BRANCH_NAME,$DOCKERHUB_IMAGE:$BRANCH_NAME"
             fi
             
             # Add SHA tag for branches
-            TAGS="$TAGS,$IMAGE_NAME:sha-${GITHUB_SHA::7}"
+            TAGS="$TAGS,$GHCR_IMAGE:sha-${GITHUB_SHA::7},$DOCKERHUB_IMAGE:sha-${GITHUB_SHA::7}"
           fi
           
           # Add date tag for all builds
-          TAGS="$TAGS,$IMAGE_NAME:${{ steps.date.outputs.date }}"
+          TAGS="$TAGS,$GHCR_IMAGE:${{ steps.date.outputs.date }},$DOCKERHUB_IMAGE:${{ steps.date.outputs.date }}"
           
           # Clean up any leading commas
           TAGS=$(echo "$TAGS" | sed 's/^,*//')
           
           echo "Final tags: $TAGS"
           echo "tags=$TAGS" >> $GITHUB_OUTPUT
+          echo "ghcr_image=$GHCR_IMAGE" >> $GITHUB_OUTPUT
+          echo "dockerhub_image=$DOCKERHUB_IMAGE" >> $GITHUB_OUTPUT
           
       - name: Build and push frontend
         uses: docker/build-push-action@v5
@@ -217,29 +256,41 @@ jobs:
     steps:
       - name: Build Summary
         run: |
-          echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## 🚀 Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Event:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
           echo "**Branch/Tag:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
           echo "**Ref Type:** ${{ github.ref_type }}" >> $GITHUB_STEP_SUMMARY
           echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Images pushed:**" >> $GITHUB_STEP_SUMMARY
+          
+          echo "### 📦 Images Published" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### GitHub Container Registry:" >> $GITHUB_STEP_SUMMARY
+          echo "- \`ghcr.io/$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')-backend\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`ghcr.io/$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')-frontend\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### DockerHub:" >> $GITHUB_STEP_SUMMARY
           echo "- \`${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}-backend\`" >> $GITHUB_STEP_SUMMARY
           echo "- \`${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}-frontend\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Platforms:** linux/amd64, linux/arm64, linux/arm/v7" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
           
           # Show tag information
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
-            echo "**Release Type:** Version Tag (${{ github.ref_name }})" >> $GITHUB_STEP_SUMMARY
+            echo "**Release Type:** 🏷️ Version Tag (\`${{ github.ref_name }}\`)" >> $GITHUB_STEP_SUMMARY
           else
-            echo "**Release Type:** Branch Build (${{ github.ref_name }})" >> $GITHUB_STEP_SUMMARY
+            echo "**Release Type:** 🌿 Branch Build (\`${{ github.ref_name }}\`)" >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
           
           if [ "${{ needs.build-backend.result }}" == "success" ] && [ "${{ needs.build-frontend.result }}" == "success" ]; then
             echo "✅ All builds completed successfully!" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 🔗 Quick Links:" >> $GITHUB_STEP_SUMMARY
+            echo "- [GitHub Packages](https://github.com/${{ github.repository }}/pkgs/container)" >> $GITHUB_STEP_SUMMARY
+            echo "- [DockerHub](https://hub.docker.com/u/${{ secrets.DOCKERHUB_USERNAME }})" >> $GITHUB_STEP_SUMMARY
           else
             echo "❌ Some builds failed. Check the logs above." >> $GITHUB_STEP_SUMMARY
           fi
