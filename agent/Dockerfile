@@ -8,6 +8,8 @@ RUN apk add --no-cache git
 
 # Copy go mod files
 COPY go.mod go.sum ./
+# FIX: Run go mod tidy to ensure all dependencies are fetched
+RUN go mod tidy
 RUN go mod download
 
 # Copy source code
@@ -30,7 +32,6 @@ WORKDIR /root/
 
 # Copy the binary from builder
 COPY --from=builder /app/main .
-
 # Create necessary directories
 RUN mkdir -p /logs /maxmind
 
