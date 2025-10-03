@@ -34,15 +34,17 @@ func (h *Handler) HandleAccessLogs(w http.ResponseWriter, r *http.Request) {
 	position := utils.GetQueryParamInt64(r, "position", 0)
 	lines := utils.GetQueryParamInt(r, "lines", 1000)
 
-	// FIX: Adapt the call to the new logs.GetLogs signature
-	positions := []logs.Position{{Position: position, Filename: ""}}
+	// FIX: Adapt the call to the new logs.GetLogs signature.
+	// We construct a slice of positions as required by the new function.
+	positions := []logs.Position{{Position: position}}
 	result, err := logs.GetLogs(h.config.AccessPath, positions, false, false)
 	if err != nil {
 		utils.RespondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	// Manually limit the number of lines since the parameter was removed from GetLogs
+	// Manually truncate the logs to the requested number of lines,
+	// as this parameter was likely removed from the GetLogs function.
 	if len(result.Logs) > lines {
 		result.Logs = result.Logs[:lines]
 	}
@@ -61,15 +63,14 @@ func (h *Handler) HandleErrorLogs(w http.ResponseWriter, r *http.Request) {
 	position := utils.GetQueryParamInt64(r, "position", 0)
 	lines := utils.GetQueryParamInt(r, "lines", 100)
 
-	// FIX: Adapt the call to the new logs.GetLogs signature
-	positions := []logs.Position{{Position: position, Filename: ""}}
+	// FIX: Adapt the call to the new signature.
+	positions := []logs.Position{{Position: position}}
 	result, err := logs.GetLogs(h.config.ErrorPath, positions, false, false)
 	if err != nil {
 		utils.RespondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	// Manually limit the number of lines
 	if len(result.Logs) > lines {
 		result.Logs = result.Logs[:lines]
 	}
@@ -124,26 +125,24 @@ func (h *Handler) HandleStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if access log path exists
 	accessPathExists := false
 	if info, err := os.Stat(h.config.AccessPath); err == nil {
 		accessPathExists = true
 		if info.IsDir() {
 			entries, _ := os.ReadDir(h.config.AccessPath)
-			if len(entries) > 0 {
-				accessPathExists = true
+			if len(entries) == 0 {
+				accessPathExists = false
 			}
 		}
 	}
 
-	// Check if error log path exists
 	errorPathExists := false
 	if info, err := os.Stat(h.config.ErrorPath); err == nil {
 		errorPathExists = true
 		if info.IsDir() {
 			entries, _ := os.ReadDir(h.config.ErrorPath)
-			if len(entries) > 0 {
-				errorPathExists = true
+			if len(entries) == 0 {
+				errorPathExists = false
 			}
 		}
 	}
@@ -161,7 +160,6 @@ func (h *Handler) HandleStatus(w http.ResponseWriter, r *http.Request) {
 	utils.RespondJSON(w, http.StatusOK, status)
 }
 
-
 // HandleGetLog handles requests for a specific log file
 func (h *Handler) HandleGetLog(w http.ResponseWriter, r *http.Request) {
 	utils.EnableCORS(w)
@@ -178,11 +176,10 @@ func (h *Handler) HandleGetLog(w http.ResponseWriter, r *http.Request) {
 
 	position := utils.GetQueryParamInt64(r, "position", 0)
 	lines := utils.GetQueryParamInt(r, "lines", 100)
-	
-	// Construct full path, assuming AccessPath is the base directory
+
 	fullPath := filepath.Join(h.config.AccessPath, filename)
 
-	// FIX: Adapt the call to the new logs.GetLogs signature
+	// FIX: Adapt the call to the new signature.
 	positions := []logs.Position{{Position: position, Filename: filename}}
 	result, err := logs.GetLogs(fullPath, positions, false, false)
 	if err != nil {
@@ -190,7 +187,6 @@ func (h *Handler) HandleGetLog(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Manually limit the number of lines
 	if len(result.Logs) > lines {
 		result.Logs = result.Logs[:lines]
 	}
