@@ -15,7 +15,7 @@ export function parseTraefikLog(logLine: string): TraefikLog | null {
   if (logLine.trim().startsWith('{')) {
     try {
       return parseJSONLog(logLine);
-    } catch (e) {
+    } catch (_e) {
       // If JSON parsing fails, try CLF
     }
   }

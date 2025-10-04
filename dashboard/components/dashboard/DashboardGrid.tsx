@@ -17,7 +17,7 @@ interface DashboardGridProps {
   demoMode?: boolean;
 }
 
-export default function DashboardGrid({ metrics, demoMode = false }: DashboardGridProps) {
+export default function DashboardGrid({ metrics, demoMode: _demoMode = false }: DashboardGridProps) {
   return (
     <div className="space-y-6">
       {/* Top Row - Key Metrics */}
