@@ -20,7 +20,7 @@ export default function DashboardPage() {
         // Check agent status first
         const status = await apiClient.getStatus();
         
-        if (!status.access_log_exists) {
+        if (!status.access_path_exists) {
           setError('Access log file not found. Please check agent configuration.');
           setLoading(false);
           return;
