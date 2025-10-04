@@ -5,11 +5,9 @@ const nextConfig = {
   compress: true,
   output: 'standalone', // Required for Docker deployment
   
-  env: {
-    AGENT_API_URL: process.env.AGENT_API_URL || 'http://localhost:5000',
-    AGENT_API_TOKEN: process.env.AGENT_API_TOKEN || '',
-  },
-
+  // REMOVED: env section - this bakes values at build time!
+  // API routes will read process.env directly at runtime instead
+  
   async headers() {
     return [
       {

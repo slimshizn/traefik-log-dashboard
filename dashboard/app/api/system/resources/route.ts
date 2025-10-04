@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
-
-const AGENT_API_URL = process.env.AGENT_API_URL || 'http://localhost:5000';
-const AGENT_API_TOKEN = process.env.AGENT_API_TOKEN;
+import { agentConfig } from '@/lib/agent-config';
 
 export async function GET() {
   try {
+    const AGENT_API_URL = agentConfig.url;
+    const AGENT_API_TOKEN = agentConfig.token;
+
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
     };
