@@ -4,6 +4,92 @@ import { TraefikLog } from './types';
 const CLF_PATTERN = /^(\S+) - (\S+) \[([^\]]+)\] "(\S+) (\S+) (\S+)" (\d+) (\d+) "([^"]*)" "([^"]*)" (\d+) "([^"]*)" "([^"]*)" (\d+)ms/;
 
 /**
+ * Helper function to safely extract string values from parsed JSON
+ * Handles multiple possible field name variations
+ */
+function getStringValue(parsed: any, keys: string[], defaultValue: string = ''): string {
+  for (const key of keys) {
+    if (parsed[key] !== undefined && parsed[key] !== null) {
+      if (typeof parsed[key] === 'string') {
+        return parsed[key];
+      }
+      // Convert to string if it's another type
+      return String(parsed[key]);
+    }
+  }
+  return defaultValue;
+}
+
+/**
+ * Helper function to safely extract integer values from parsed JSON
+ */
+function getIntValue(parsed: any, keys: string[], defaultValue: number = 0): number {
+  for (const key of keys) {
+    const value = parsed[key];
+    if (value !== undefined && value !== null) {
+      if (typeof value === 'number') {
+        return Math.floor(value);
+      }
+      if (typeof value === 'string') {
+        const num = parseInt(value, 10);
+        if (!isNaN(num)) {
+          return num;
+        }
+      }
+    }
+  }
+  return defaultValue;
+}
+
+/**
+ * Helper function to safely extract float values from parsed JSON
+ */
+function getFloatValue(parsed: any, keys: string[], defaultValue: number = 0): number {
+  for (const key of keys) {
+    const value = parsed[key];
+    if (value !== undefined && value !== null) {
+      if (typeof value === 'number') {
+        return value;
+      }
+      if (typeof value === 'string') {
+        const num = parseFloat(value);
+        if (!isNaN(num)) {
+          return num;
+        }
+      }
+    }
+  }
+  return defaultValue;
+}
+
+/**
+ * Check if a parsed JSON object is a valid Traefik log entry
+ */
+function isValidTraefikLog(parsed: any): boolean {
+  // Must have a timestamp
+  if (!parsed.time && !parsed.Time && !parsed.StartUTC) {
+    return false;
+  }
+
+  // For access logs, must have downstream status or request method
+  if (parsed.DownstreamStatus !== undefined || parsed.downstreamStatus !== undefined) {
+    return true;
+  }
+  
+  if (parsed.RequestMethod !== undefined || parsed.requestMethod !== undefined) {
+    return true;
+  }
+
+  // For error logs, check for level
+  if (parsed.level) {
+    const level = String(parsed.level).toLowerCase();
+    return level === 'error' || level === 'warn';
+  }
+
+  return false;
+}
+
+/**
  * Parse a single Traefik log line (auto-detect JSON or CLF format)
  */
 export function parseTraefikLog(logLine: string): TraefikLog | null {
@@ -26,43 +112,58 @@ export function parseTraefikLog(logLine: string): TraefikLog | null {
 
 /**
  * Parse JSON format Traefik log
+ * Enhanced to handle multiple field name variations and validate entries
  */
 function parseJSONLog(logLine: string): TraefikLog | null {
   try {
     const parsed = JSON.parse(logLine);
     
+    // Validate that this is actually a Traefik log
+    if (!isValidTraefikLog(parsed)) {
+      return null;
+    }
+    
     // Convert JSON fields to TraefikLog structure
+    // Using helper functions to handle multiple field name variations
     return {
-      ClientAddr: parsed.ClientAddr || parsed.clientAddr || '',
-      ClientHost: parsed.ClientHost || parsed.clientHost || '',
-      ClientPort: parsed.ClientPort || parsed.clientPort || '',
-      ClientUsername: parsed.ClientUsername || parsed.clientUsername || '-',
-      DownstreamContentSize: parsed.DownstreamContentSize || parsed.downstreamContentSize || 0,
-      DownstreamStatus: parsed.DownstreamStatus || parsed.downstreamStatus || 0,
-      Duration: parsed.Duration || parsed.duration || 0,
-      OriginContentSize: parsed.OriginContentSize || parsed.originContentSize || 0,
-      OriginDuration: parsed.OriginDuration || parsed.originDuration || 0,
-      OriginStatus: parsed.OriginStatus || parsed.originStatus || 0,
-      Overhead: parsed.Overhead || parsed.overhead || 0,
-      RequestAddr: parsed.RequestAddr || parsed.requestAddr || '',
-      RequestContentSize: parsed.RequestContentSize || parsed.requestContentSize || 0,
-      RequestCount: parsed.RequestCount || parsed.requestCount || 0,
-      RequestHost: parsed.RequestHost || parsed.requestHost || '',
-      RequestMethod: parsed.RequestMethod || parsed.requestMethod || '',
-      RequestPath: parsed.RequestPath || parsed.requestPath || '',
-      RequestPort: parsed.RequestPort || parsed.requestPort || '',
-      RequestProtocol: parsed.RequestProtocol || parsed.requestProtocol || '',
-      RequestScheme: parsed.RequestScheme || parsed.requestScheme || '',
-      RetryAttempts: parsed.RetryAttempts || parsed.retryAttempts || 0,
-      RouterName: parsed.RouterName || parsed.routerName || '',
-      ServiceAddr: parsed.ServiceAddr || parsed.serviceAddr || '',
-      ServiceName: parsed.ServiceName || parsed.serviceName || '',
-      ServiceURL: parsed.ServiceURL || parsed.serviceURL || '',
-      StartLocal: parsed.StartLocal || parsed.startLocal || '',
-      StartUTC: parsed.StartUTC || parsed.startUTC || '',
-      entryPointName: parsed.entryPointName || parsed.EntryPointName || '',
-      request_Referer: parsed.request_Referer || parsed.RequestReferer || '',
-      request_User_Agent: parsed.request_User_Agent || parsed.RequestUserAgent || '',
+      ClientAddr: getStringValue(parsed, ['ClientAddr', 'clientAddr']),
+      ClientHost: getStringValue(parsed, ['ClientHost', 'clientHost']),
+      ClientPort: getStringValue(parsed, ['ClientPort', 'clientPort']),
+      ClientUsername: getStringValue(parsed, ['ClientUsername', 'clientUsername'], '-'),
+      DownstreamContentSize: getIntValue(parsed, ['DownstreamContentSize', 'downstreamContentSize']),
+      DownstreamStatus: getIntValue(parsed, ['DownstreamStatus', 'downstreamStatus']),
+      Duration: getIntValue(parsed, ['Duration', 'duration']),
+      OriginContentSize: getIntValue(parsed, ['OriginContentSize', 'originContentSize']),
+      OriginDuration: getIntValue(parsed, ['OriginDuration', 'originDuration']),
+      OriginStatus: getIntValue(parsed, ['OriginStatus', 'originStatus']),
+      Overhead: getIntValue(parsed, ['Overhead', 'overhead']),
+      RequestAddr: getStringValue(parsed, ['RequestAddr', 'requestAddr']),
+      RequestContentSize: getIntValue(parsed, ['RequestContentSize', 'requestContentSize']),
+      RequestCount: getIntValue(parsed, ['RequestCount', 'requestCount']),
+      RequestHost: getStringValue(parsed, ['RequestHost', 'requestHost']),
+      RequestMethod: getStringValue(parsed, ['RequestMethod', 'requestMethod']),
+      RequestPath: getStringValue(parsed, ['RequestPath', 'requestPath']),
+      RequestPort: getStringValue(parsed, ['RequestPort', 'requestPort']),
+      RequestProtocol: getStringValue(parsed, ['RequestProtocol', 'requestProtocol']),
+      RequestScheme: getStringValue(parsed, ['RequestScheme', 'requestScheme']),
+      RetryAttempts: getIntValue(parsed, ['RetryAttempts', 'retryAttempts']),
+      RouterName: getStringValue(parsed, ['RouterName', 'routerName']),
+      ServiceAddr: getStringValue(parsed, ['ServiceAddr', 'serviceAddr']),
+      ServiceName: getStringValue(parsed, ['ServiceName', 'serviceName']),
+      ServiceURL: getStringValue(parsed, ['ServiceURL', 'serviceURL']),
+      StartLocal: getStringValue(parsed, ['StartLocal', 'startLocal']),
+      StartUTC: getStringValue(parsed, ['StartUTC', 'startUTC', 'time', 'Time']),
+      entryPointName: getStringValue(parsed, ['entryPointName', 'EntryPointName']),
+      request_Referer: getStringValue(parsed, ['request_Referer', 'RequestReferer', 'Referer']),
+      // CRITICAL: Handle all possible User-Agent field variations
+      request_User_Agent: getStringValue(parsed, [
+        'request_User_Agent',    // Underscore version
+        'request_User-Agent',    // Hyphen version (common in Traefik)
+        'RequestUserAgent',      // PascalCase version
+        'request-User-Agent',    // Another variation
+        'User-Agent',            // Simple version
+        'UserAgent'              // No separator version
+      ]),
     };
   } catch (e) {
     return null;
@@ -138,6 +239,7 @@ function parseCLFLog(logLine: string): TraefikLog | null {
 
 /**
  * Parse multiple Traefik log lines
+ * Filters out invalid entries automatically
  */
 export function parseTraefikLogs(logLines: string[]): TraefikLog[] {
   return logLines
@@ -167,4 +269,36 @@ export function extractStatus(logLine: string): number | null {
 export function extractTimestamp(logLine: string): string | null {
   const match = logLine.match(/\[([^\]]+)\]/);
   return match ? match[1] : null;
+}
+
+/**
+ * Extract client IP from various address formats
+ */
+export function extractIP(clientAddr: string): string {
+  if (!clientAddr || clientAddr === '') {
+    return 'unknown';
+  }
+
+  // Handle IPv6 addresses in brackets
+  if (clientAddr.startsWith('[')) {
+    const match = clientAddr.indexOf(']');
+    if (match !== -1) {
+      return clientAddr.substring(1, match);
+    }
+  }
+
+  // Handle IPv4 with port
+  if (clientAddr.includes('.') && clientAddr.includes(':')) {
+    const lastColon = clientAddr.lastIndexOf(':');
+    if (lastColon !== -1) {
+      return clientAddr.substring(0, lastColon);
+    }
+  }
+
+  // Handle IPv6 without brackets
+  if (clientAddr.includes(':') && !clientAddr.includes('.')) {
+    return clientAddr;
+  }
+
+  return clientAddr;
 }
