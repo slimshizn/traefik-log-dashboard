@@ -91,14 +91,13 @@ export interface LogSizesResponse {
 
 export interface StatusResponse {
   status: string;
-  message: string;
-  access_log_path: string;
-  error_log_path: string;
-  access_log_exists: boolean;
-  error_log_exists: boolean;
-  system_monitoring_enabled: boolean;
+  access_path: string;
+  access_path_exists: boolean;
+  error_path: string;
+  error_path_exists: boolean;
+  system_monitoring: boolean;
+  auth_enabled: boolean;
 }
-
 // Dashboard Metrics Types
 export interface RequestMetrics {
   total: number;
