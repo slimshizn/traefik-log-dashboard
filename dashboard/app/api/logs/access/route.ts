@@ -7,13 +7,14 @@ export const revalidate = 0; // No caching
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const position = searchParams.get('position') || '0';
+    const position = searchParams.get('position') || '-2'; // Default to tracked position
     const lines = searchParams.get('lines') || '1000';
+    const tail = searchParams.get('tail') || 'false';
 
     const AGENT_API_URL = agentConfig.url;
     const AGENT_API_TOKEN = agentConfig.token;
 
-    console.log('Fetching from agent:', `${AGENT_API_URL}/api/logs/access`);
+    console.log('Fetching from agent:', `${AGENT_API_URL}/api/logs/access?position=${position}&lines=${lines}&tail=${tail}`);
 
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
@@ -25,14 +26,14 @@ export async function GET(request: NextRequest) {
       headers['Authorization'] = `Bearer ${AGENT_API_TOKEN}`;
     }
 
-    const response = await fetch(
-      `${AGENT_API_URL}/api/logs/access?position=${position}&lines=${lines}`,
-      { 
-        headers,
-        cache: 'no-store', // Prevent fetch caching
-        next: { revalidate: 0 } // Next.js specific - no caching
-      }
-    );
+    // Build URL with all parameters
+    const agentUrl = `${AGENT_API_URL}/api/logs/access?position=${position}&lines=${lines}&tail=${tail}`;
+
+    const response = await fetch(agentUrl, { 
+      headers,
+      cache: 'no-store', // Prevent fetch caching
+      next: { revalidate: 0 } // Next.js specific - no caching
+    });
 
     if (!response.ok) {
       const error = await response.text();
@@ -44,6 +45,8 @@ export async function GET(request: NextRequest) {
     }
 
     const data = await response.json();
+    
+    console.log('Agent returned', data.logs?.length || 0, 'logs');
     
     // Add no-cache headers to response
     const res = NextResponse.json(data);

@@ -16,6 +16,9 @@ export default function DashboardPage() {
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [logCount, setLogCount] = useState(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const positionRef = useRef<number>(-1); // Start with -1 for tail mode
+  const isFirstFetch = useRef(true);
+  const allLogsRef = useRef<TraefikLog[]>([]); // Store all logs
 
   const fetchLogs = async () => {
     try {
@@ -31,37 +34,84 @@ export default function DashboardPage() {
 
       setConnected(true);
 
-      // Fetch access logs - always get fresh data from position 0
-      const response = await apiClient.getAccessLogs(0, 1000);
+      // Fetch access logs with position tracking
+      // On first fetch, use tail=true to get last 1000 lines
+      // On subsequent fetches, use the stored position
+      const params = new URLSearchParams({
+        lines: '1000',
+      });
+      
+      if (isFirstFetch.current) {
+        params.append('tail', 'true');
+        params.append('position', '-1');
+        isFirstFetch.current = false;
+      } else if (positionRef.current >= 0) {
+        params.append('position', positionRef.current.toString());
+      } else {
+        // Default to getting new logs from tracked position
+        params.append('position', '-2');
+      }
+
+      const url = `/api/logs/access?${params}`;
+      console.log('Fetching logs from:', url);
+
+      const response = await fetch(url, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch logs: ${response.status}`);
+      }
+
+      const data = await response.json();
       
       // Debug: Log raw response
-      console.log('Fetched logs count:', response.logs.length);
-      if (response.logs.length > 0) {
-        console.log('First log sample:', response.logs[0]);
+      console.log('Fetched logs count:', data.logs?.length || 0);
+      console.log('New position:', data.positions?.[0]?.position);
+
+      // Update position for next fetch
+      if (data.positions && data.positions.length > 0) {
+        positionRef.current = data.positions[0].position;
       }
 
       // Parse the logs
-      const parsedLogs = parseTraefikLogs(response.logs);
+      const newParsedLogs = parseTraefikLogs(data.logs || []);
       
-      // Debug: Log parsed results
-      console.log('Parsed logs count:', parsedLogs.length);
-      if (parsedLogs.length > 0) {
-        console.log('First parsed log:', parsedLogs[0]);
-      }
+      console.log('Newly parsed logs count:', newParsedLogs.length);
 
-      // Only update if we have new data
-      if (parsedLogs.length > 0) {
+      if (newParsedLogs.length > 0) {
+        // Add new logs to our collection
+        const combinedLogs = [...allLogsRef.current, ...newParsedLogs];
+        
+        // Remove duplicates based on a unique combination of fields
+        const uniqueLogs = new Map<string, TraefikLog>();
+        combinedLogs.forEach(log => {
+          const key = `${log.StartUTC}-${log.ClientAddr}-${log.RequestPath}-${log.Duration}`;
+          uniqueLogs.set(key, log);
+        });
+
+        const dedupedLogs = Array.from(uniqueLogs.values());
+
         // Sort by timestamp (newest first)
-        const sortedLogs = parsedLogs.sort((a, b) => {
+        const sortedLogs = dedupedLogs.sort((a, b) => {
           const timeA = new Date(a.StartUTC || a.StartLocal || 0).getTime();
           const timeB = new Date(b.StartUTC || b.StartLocal || 0).getTime();
           return timeB - timeA;
         });
 
-        setLogs(sortedLogs);
-        setLogCount(sortedLogs.length);
+        // Keep only last 5000 logs to prevent memory issues
+        const trimmedLogs = sortedLogs.slice(0, 5000);
+
+        allLogsRef.current = trimmedLogs;
+        setLogs(trimmedLogs);
+        setLogCount(trimmedLogs.length);
         setLastUpdate(new Date());
         setError(null);
+
+        console.log('Total unique logs:', trimmedLogs.length);
       } else if (logs.length === 0) {
         // Only set error if we don't have any logs yet
         setError('No logs found. Waiting for Traefik to generate access logs...');
@@ -83,8 +133,8 @@ export default function DashboardPage() {
     // Initial fetch
     fetchLogs();
 
-    // Set up polling interval (5 seconds)
-    intervalRef.current = setInterval(fetchLogs, 5000);
+    // Set up polling interval (3 seconds for more responsive updates)
+    intervalRef.current = setInterval(fetchLogs, 3000);
 
     // Cleanup on unmount
     return () => {
@@ -126,7 +176,11 @@ export default function DashboardPage() {
                   : 'Please check that the agent is running and accessible.'}
               </p>
               <button
-                onClick={fetchLogs}
+                onClick={() => {
+                  isFirstFetch.current = true;
+                  positionRef.current = -1;
+                  fetchLogs();
+                }}
                 className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
               >
                 Retry
@@ -153,7 +207,7 @@ export default function DashboardPage() {
             )}
             <span className="flex items-center gap-1">
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              Auto-refreshing every 5s
+              Auto-refreshing every 3s
             </span>
           </div>
         </div>

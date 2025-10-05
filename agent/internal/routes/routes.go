@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/hhftechnology/traefik-log-dashboard/agent/internal/config"
 	"github.com/hhftechnology/traefik-log-dashboard/agent/internal/utils"
@@ -14,18 +15,34 @@ import (
 // Handler manages HTTP routes and dependencies
 type Handler struct {
 	config *config.Config
-	// Track positions for incremental reading
-	accessPositions map[string]int64
-	errorPositions  map[string]int64
+	// Track file positions for incremental reading
+	positions     map[string]int64
+	positionMutex sync.RWMutex
 }
 
 // NewHandler creates a new Handler with the given configuration
 func NewHandler(cfg *config.Config) *Handler {
 	return &Handler{
-		config:          cfg,
-		accessPositions: make(map[string]int64),
-		errorPositions:  make(map[string]int64),
+		config:    cfg,
+		positions: make(map[string]int64),
 	}
+}
+
+// getFilePosition gets the tracked position for a file
+func (h *Handler) getFilePosition(path string) int64 {
+	h.positionMutex.RLock()
+	defer h.positionMutex.RUnlock()
+	if pos, exists := h.positions[path]; exists {
+		return pos
+	}
+	return -1 // Return -1 to indicate first read (tail mode)
+}
+
+// setFilePosition updates the tracked position for a file
+func (h *Handler) setFilePosition(path string, position int64) {
+	h.positionMutex.Lock()
+	defer h.positionMutex.Unlock()
+	h.positions[path] = position
 }
 
 // HandleAccessLogs handles requests for access logs
@@ -36,10 +53,12 @@ func (h *Handler) HandleAccessLogs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	position := utils.GetQueryParamInt64(r, "position", 0)
+	// Get query parameters
+	position := utils.GetQueryParamInt64(r, "position", -2) // -2 means use tracked position
 	lines := utils.GetQueryParamInt(r, "lines", 1000)
+	tail := utils.GetQueryParamBool(r, "tail", false)
 
-	// Check if path is directory or file
+	// Check if path exists
 	fileInfo, err := os.Stat(h.config.AccessPath)
 	if err != nil {
 		utils.RespondError(w, http.StatusInternalServerError, err.Error())
@@ -47,15 +66,42 @@ func (h *Handler) HandleAccessLogs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var result logs.LogResult
-	
+
 	if fileInfo.IsDir() {
-		// For directories, use empty positions (will read all files)
-		positions := []logs.Position{}
-		result, err = logs.GetLogs(h.config.AccessPath, positions, false, false)
+		// For directories, get logs from all files
+		if tail || position == -2 {
+			// First request or tail mode - get last N lines
+			positions := []logs.Position{}
+			result, err = logs.GetLogs(h.config.AccessPath, positions, false, false)
+		} else {
+			// Use provided position
+			positions := []logs.Position{{Position: position}}
+			result, err = logs.GetLogs(h.config.AccessPath, positions, false, false)
+		}
 	} else {
-		// For single file, use provided position
-		positions := []logs.Position{{Position: position}}
+		// Single file
+		trackedPos := h.getFilePosition(h.config.AccessPath)
+		
+		// Determine position to use
+		var usePosition int64
+		if position == -2 {
+			// Use tracked position
+			usePosition = trackedPos
+		} else if position == -1 || tail {
+			// Tail mode requested
+			usePosition = -1
+		} else {
+			// Use provided position
+			usePosition = position
+		}
+
+		positions := []logs.Position{{Position: usePosition}}
 		result, err = logs.GetLogs(h.config.AccessPath, positions, false, false)
+
+		// Update tracked position if we got results
+		if err == nil && len(result.Positions) > 0 {
+			h.setFilePosition(h.config.AccessPath, result.Positions[0].Position)
+		}
 	}
 
 	if err != nil {
@@ -65,7 +111,9 @@ func (h *Handler) HandleAccessLogs(w http.ResponseWriter, r *http.Request) {
 
 	// Limit the number of logs returned
 	if len(result.Logs) > lines {
-		result.Logs = result.Logs[:lines]
+		// Keep only the most recent logs
+		startIdx := len(result.Logs) - lines
+		result.Logs = result.Logs[startIdx:]
 	}
 
 	utils.RespondJSON(w, http.StatusOK, result)
@@ -79,10 +127,10 @@ func (h *Handler) HandleErrorLogs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	position := utils.GetQueryParamInt64(r, "position", 0)
+	position := utils.GetQueryParamInt64(r, "position", -2)
 	lines := utils.GetQueryParamInt(r, "lines", 100)
+	tail := utils.GetQueryParamBool(r, "tail", false)
 
-	// Check if path is directory or file
 	fileInfo, err := os.Stat(h.config.ErrorPath)
 	if err != nil {
 		utils.RespondError(w, http.StatusInternalServerError, err.Error())
@@ -90,15 +138,33 @@ func (h *Handler) HandleErrorLogs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var result logs.LogResult
-	
+
 	if fileInfo.IsDir() {
-		// For directories, use empty positions
-		positions := []logs.Position{}
-		result, err = logs.GetLogs(h.config.ErrorPath, positions, true, false)
+		if tail || position == -2 {
+			positions := []logs.Position{}
+			result, err = logs.GetLogs(h.config.ErrorPath, positions, true, false)
+		} else {
+			positions := []logs.Position{{Position: position}}
+			result, err = logs.GetLogs(h.config.ErrorPath, positions, true, false)
+		}
 	} else {
-		// For single file, use provided position
-		positions := []logs.Position{{Position: position}}
+		trackedPos := h.getFilePosition(h.config.ErrorPath)
+		
+		var usePosition int64
+		if position == -2 {
+			usePosition = trackedPos
+		} else if position == -1 || tail {
+			usePosition = -1
+		} else {
+			usePosition = position
+		}
+
+		positions := []logs.Position{{Position: usePosition}}
 		result, err = logs.GetLogs(h.config.ErrorPath, positions, true, false)
+
+		if err == nil && len(result.Positions) > 0 {
+			h.setFilePosition(h.config.ErrorPath, result.Positions[0].Position)
+		}
 	}
 
 	if err != nil {
@@ -106,9 +172,9 @@ func (h *Handler) HandleErrorLogs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Limit the number of logs returned
 	if len(result.Logs) > lines {
-		result.Logs = result.Logs[:lines]
+		startIdx := len(result.Logs) - lines
+		result.Logs = result.Logs[startIdx:]
 	}
 
 	utils.RespondJSON(w, http.StatusOK, result)
@@ -215,7 +281,6 @@ func (h *Handler) HandleGetLog(w http.ResponseWriter, r *http.Request) {
 
 	fullPath := filepath.Join(h.config.AccessPath, filename)
 
-	// Use specific position for the requested file
 	positions := []logs.Position{{Position: position, Filename: filename}}
 	result, err := logs.GetLogs(fullPath, positions, false, false)
 	if err != nil {
@@ -223,7 +288,6 @@ func (h *Handler) HandleGetLog(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Limit the number of logs returned
 	if len(result.Logs) > lines {
 		result.Logs = result.Logs[:lines]
 	}
