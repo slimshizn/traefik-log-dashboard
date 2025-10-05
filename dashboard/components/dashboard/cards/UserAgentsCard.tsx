@@ -1,7 +1,7 @@
 'use client';
 
 import { Monitor } from 'lucide-react';
-import Card from '@/components/ui/Card';
+import Card from '@/components/ui/DashboardCard';
 import { UserAgentMetrics } from '@/lib/types';
 import { formatNumber } from '@/lib/utils';
 

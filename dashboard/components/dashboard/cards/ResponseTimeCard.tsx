@@ -1,7 +1,7 @@
 'use client';
 
 import { Clock } from 'lucide-react';
-import Card from '@/components/ui/Card';
+import Card from '@/components/ui/DashboardCard';
 import { ResponseTimeMetrics } from '@/lib/types';
 
 interface ResponseTimeCardProps {

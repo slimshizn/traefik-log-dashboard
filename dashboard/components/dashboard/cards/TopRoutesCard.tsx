@@ -1,7 +1,7 @@
 'use client';
 
 import { TrendingUp } from 'lucide-react';
-import Card from '@/components/ui/Card';
+import Card from '@/components/ui/DashboardCard';
 import { RouteMetrics } from '@/lib/types';
 import { formatNumber, truncate } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';

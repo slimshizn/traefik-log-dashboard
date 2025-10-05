@@ -1,7 +1,7 @@
 'use client';
 
 import { TrendingUp } from 'lucide-react';
-import Card from '@/components/ui/Card';
+import Card from '@/components/ui/DashboardCard';
 import TimeSeriesChart from '@/components/charts/TimeSeriesChart';
 import { TimeSeriesPoint } from '@/lib/types';
 

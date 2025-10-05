@@ -1,7 +1,7 @@
 'use client';
 
 import { AlertTriangle } from 'lucide-react';
-import Card from '@/components/ui/Card';
+import Card from '@/components/ui/DashboardCard';
 import { ErrorLog } from '@/lib/types';
 import { timeAgo } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';

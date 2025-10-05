@@ -1,7 +1,7 @@
 'use client';
 
 import { Activity } from 'lucide-react';
-import Card from '@/components/ui/Card';
+import Card from '@/components/ui/DashboardCard';
 import { RequestMetrics } from '@/lib/types';
 import { formatNumber } from '@/lib/utils';
 
