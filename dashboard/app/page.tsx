@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 import { Activity, BarChart3, Terminal, ArrowRight, Github, Star } from 'lucide-react';
 
 export default function LandingPage() {
@@ -48,18 +49,13 @@ export default function LandingPage() {
           </p>
           
           <div className="flex items-center justify-center space-x-4">
-            <button className="inline-flex items-center px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors">
-              <Link href="/dashboard" className="inline-flex items-center gap-2">
+            <Link href="/dashboard" className="inline-flex items-center px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors">
               View Dashboard
               <ArrowRight className="ml-2 w-4 h-4" />
-              </Link>
-            </button>
-            <button className="inline-flex items-center px-6 py-3 border border-gray-300 text-gray-900 rounded-lg hover:bg-gray-50 transition-colors">
-              <Link href="/dashboard/demo" className="inline-flex items-center gap-2">
+            </Link>
+            <Link href="/dashboard/demo" className="inline-flex items-center px-6 py-3 border border-gray-300 text-gray-900 rounded-lg hover:bg-gray-50 transition-colors">
               Try Demo
-              <ArrowRight className="ml-2 w-4 h-4" />
-              </Link>
-            </button>
+            </Link>
           </div>
         </div>
       </div>
