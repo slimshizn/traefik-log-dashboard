@@ -14,12 +14,17 @@ import (
 // Handler manages HTTP routes and dependencies
 type Handler struct {
 	config *config.Config
+	// Track positions for incremental reading
+	accessPositions map[string]int64
+	errorPositions  map[string]int64
 }
 
 // NewHandler creates a new Handler with the given configuration
 func NewHandler(cfg *config.Config) *Handler {
 	return &Handler{
-		config: cfg,
+		config:          cfg,
+		accessPositions: make(map[string]int64),
+		errorPositions:  make(map[string]int64),
 	}
 }
 
@@ -34,17 +39,31 @@ func (h *Handler) HandleAccessLogs(w http.ResponseWriter, r *http.Request) {
 	position := utils.GetQueryParamInt64(r, "position", 0)
 	lines := utils.GetQueryParamInt(r, "lines", 1000)
 
-	// FIX: Adapt the call to the new logs.GetLogs signature.
-	// We construct a slice of positions as required by the new function.
-	positions := []logs.Position{{Position: position}}
-	result, err := logs.GetLogs(h.config.AccessPath, positions, false, false)
+	// Check if path is directory or file
+	fileInfo, err := os.Stat(h.config.AccessPath)
 	if err != nil {
 		utils.RespondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	// Manually truncate the logs to the requested number of lines,
-	// as this parameter was likely removed from the GetLogs function.
+	var result logs.LogResult
+	
+	if fileInfo.IsDir() {
+		// For directories, use empty positions (will read all files)
+		positions := []logs.Position{}
+		result, err = logs.GetLogs(h.config.AccessPath, positions, false, false)
+	} else {
+		// For single file, use provided position
+		positions := []logs.Position{{Position: position}}
+		result, err = logs.GetLogs(h.config.AccessPath, positions, false, false)
+	}
+
+	if err != nil {
+		utils.RespondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Limit the number of logs returned
 	if len(result.Logs) > lines {
 		result.Logs = result.Logs[:lines]
 	}
@@ -63,14 +82,31 @@ func (h *Handler) HandleErrorLogs(w http.ResponseWriter, r *http.Request) {
 	position := utils.GetQueryParamInt64(r, "position", 0)
 	lines := utils.GetQueryParamInt(r, "lines", 100)
 
-	// FIX: Adapt the call to the new signature.
-	positions := []logs.Position{{Position: position}}
-	result, err := logs.GetLogs(h.config.ErrorPath, positions, false, false)
+	// Check if path is directory or file
+	fileInfo, err := os.Stat(h.config.ErrorPath)
 	if err != nil {
 		utils.RespondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
+	var result logs.LogResult
+	
+	if fileInfo.IsDir() {
+		// For directories, use empty positions
+		positions := []logs.Position{}
+		result, err = logs.GetLogs(h.config.ErrorPath, positions, true, false)
+	} else {
+		// For single file, use provided position
+		positions := []logs.Position{{Position: position}}
+		result, err = logs.GetLogs(h.config.ErrorPath, positions, true, false)
+	}
+
+	if err != nil {
+		utils.RespondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Limit the number of logs returned
 	if len(result.Logs) > lines {
 		result.Logs = result.Logs[:lines]
 	}
@@ -179,7 +215,7 @@ func (h *Handler) HandleGetLog(w http.ResponseWriter, r *http.Request) {
 
 	fullPath := filepath.Join(h.config.AccessPath, filename)
 
-	// FIX: Adapt the call to the new signature.
+	// Use specific position for the requested file
 	positions := []logs.Position{{Position: position, Filename: filename}}
 	result, err := logs.GetLogs(fullPath, positions, false, false)
 	if err != nil {
@@ -187,6 +223,7 @@ func (h *Handler) HandleGetLog(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Limit the number of logs returned
 	if len(result.Logs) > lines {
 		result.Logs = result.Logs[:lines]
 	}

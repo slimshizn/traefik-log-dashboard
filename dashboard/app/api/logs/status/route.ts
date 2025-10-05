@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { agentConfig } from '@/lib/agent-config';
 
+export const dynamic = 'force-dynamic'; // Prevent Next.js from caching
+export const revalidate = 0; // No caching
+
 export async function GET() {
   try {
     // Read environment variables at runtime, not build time
@@ -11,6 +14,8 @@ export async function GET() {
 
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
     };
 
     if (AGENT_API_TOKEN) {
@@ -19,7 +24,11 @@ export async function GET() {
 
     const response = await fetch(
       `${AGENT_API_URL}/api/logs/status`,
-      { headers }
+      { 
+        headers,
+        cache: 'no-store', // Prevent fetch caching
+        next: { revalidate: 0 } // Next.js specific - no caching
+      }
     );
 
     if (!response.ok) {
@@ -31,7 +40,14 @@ export async function GET() {
     }
 
     const data = await response.json();
-    return NextResponse.json(data);
+    
+    // Add no-cache headers to response
+    const res = NextResponse.json(data);
+    res.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.headers.set('Pragma', 'no-cache');
+    res.headers.set('Expires', '0');
+    
+    return res;
   } catch (error) {
     console.error('Status API error:', error);
     return NextResponse.json(

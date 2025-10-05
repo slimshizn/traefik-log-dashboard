@@ -22,6 +22,9 @@ export class APIClient {
   ): Promise<T> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
+      // Add cache control headers to prevent stale data
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
       ...(options.headers as Record<string, string> || {}),
     };
 
@@ -29,9 +32,13 @@ export class APIClient {
       headers['Authorization'] = `Bearer ${this.authToken}`;
     }
 
-    const response = await fetch(`${this.baseURL}${endpoint}`, {
+    // Add timestamp to prevent caching
+    const url = `${this.baseURL}${endpoint}${endpoint.includes('?') ? '&' : '?'}_t=${Date.now()}`;
+
+    const response = await fetch(url, {
       ...options,
       headers,
+      cache: 'no-store', // Prevent browser caching
     });
 
     if (!response.ok) {

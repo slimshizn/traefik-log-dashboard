@@ -42,27 +42,6 @@ function getIntValue(parsed: any, keys: string[], defaultValue: number = 0): num
 }
 
 /**
- * Helper function to safely extract float values from parsed JSON
- */
-function getFloatValue(parsed: any, keys: string[], defaultValue: number = 0): number {
-  for (const key of keys) {
-    const value = parsed[key];
-    if (value !== undefined && value !== null) {
-      if (typeof value === 'number') {
-        return value;
-      }
-      if (typeof value === 'string') {
-        const num = parseFloat(value);
-        if (!isNaN(num)) {
-          return num;
-        }
-      }
-    }
-  }
-  return defaultValue;
-}
-
-/**
  * Check if a parsed JSON object is a valid Traefik log entry
  */
 function isValidTraefikLog(parsed: any): boolean {
@@ -83,7 +62,7 @@ function isValidTraefikLog(parsed: any): boolean {
   // For error logs, check for level
   if (parsed.level) {
     const level = String(parsed.level).toLowerCase();
-    return level === 'error' || level === 'warn';
+    return level === 'error' || level === 'warn' || level === 'info';
   }
 
   return false;
@@ -123,8 +102,16 @@ function parseJSONLog(logLine: string): TraefikLog | null {
       return null;
     }
     
+    // CRITICAL FIX: Handle request_ prefix fields with both hyphen and underscore
+    // Traefik uses hyphen in header names: request_User-Agent, not request_User_Agent
+    const requestUserAgent = parsed['request_User-Agent'] || 
+                           parsed['request_User_Agent'] ||
+                           parsed['RequestUserAgent'] ||
+                           parsed['User-Agent'] ||
+                           parsed['UserAgent'] ||
+                           '';
+
     // Convert JSON fields to TraefikLog structure
-    // Using helper functions to handle multiple field name variations
     return {
       ClientAddr: getStringValue(parsed, ['ClientAddr', 'clientAddr']),
       ClientHost: getStringValue(parsed, ['ClientHost', 'clientHost']),
@@ -154,16 +141,8 @@ function parseJSONLog(logLine: string): TraefikLog | null {
       StartLocal: getStringValue(parsed, ['StartLocal', 'startLocal']),
       StartUTC: getStringValue(parsed, ['StartUTC', 'startUTC', 'time', 'Time']),
       entryPointName: getStringValue(parsed, ['entryPointName', 'EntryPointName']),
-      request_Referer: getStringValue(parsed, ['request_Referer', 'RequestReferer', 'Referer']),
-      // CRITICAL: Handle all possible User-Agent field variations
-      request_User_Agent: getStringValue(parsed, [
-        'request_User_Agent',    // Underscore version
-        'request_User-Agent',    // Hyphen version (common in Traefik)
-        'RequestUserAgent',      // PascalCase version
-        'request-User-Agent',    // Another variation
-        'User-Agent',            // Simple version
-        'UserAgent'              // No separator version
-      ]),
+      request_Referer: parsed['request_Referer'] || parsed['request_referer'] || parsed['RequestReferer'] || parsed['Referer'] || '',
+      request_User_Agent: requestUserAgent,
     };
   } catch (e) {
     return null;
