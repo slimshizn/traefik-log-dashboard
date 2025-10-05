@@ -11,7 +11,7 @@ interface RequestsCardProps {
 
 export default function RequestsCard({ metrics }: RequestsCardProps) {
 	return (
-		<Card title="Total Requests" icon={<Activity className="w-5 h-5 text-blue-600" />}>
+		<Card title="Total Requests" icon={<Activity className="w-5 h-5 text-black dark:text-white" />}>
 			<div className="space-y-2">
 				<div className="text-3xl font-bold text-gray-900 dark:text-white">{formatNumber(metrics.total)}</div>
 				<div className="flex items-center gap-2 text-sm text-muted-foreground">

@@ -13,7 +13,7 @@ interface TopRoutesCardProps {
 export default function TopRoutesCard({ routes }: TopRoutesCardProps) {
 	if (routes.length === 0) {
 		return (
-			<Card title="Top Routes" icon={<TrendingUp className="w-5 h-5 text-blue-600" />}>
+			<Card title="Top Routes" icon={<TrendingUp className="w-5 h-5 text-black dark:text-white" />}>
 				<div className="text-center py-8 text-muted-foreground">No route data available</div>
 			</Card>
 		);
@@ -22,7 +22,7 @@ export default function TopRoutesCard({ routes }: TopRoutesCardProps) {
 	const maxCount = Math.max(...routes.map(r => r.count));
 
 	return (
-		<Card title="Top Routes" icon={<TrendingUp className="w-5 h-5 text-blue-600" />}>
+		<Card title="Top Routes" icon={<TrendingUp className="w-5 h-5 text-black dark:text-white" />}>
 			<div className="space-y-3">
 				{routes.map((route, index) => (
 					<div key={index} className="space-y-1">
@@ -37,7 +37,7 @@ export default function TopRoutesCard({ routes }: TopRoutesCardProps) {
 							</div>
 						</div>
 						<div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-							<div className="h-full bg-blue-500 transition-all" style={{ width: `${(route.count / maxCount) * 100}%` }} />
+							<div className="h-full bg-black dark:bg-white transition-all" style={{ width: `${(route.count / maxCount) * 100}%` }} />
 						</div>
 					</div>
 				))}

@@ -13,11 +13,11 @@ interface HeaderProps {
 
 export default function Header({ title, connected = false, demoMode = false }: HeaderProps) {
 	return (
-		<header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
+		<header className="bg-white dark:bg-black border-b border-gray-200 dark:border-white/10 sticky top-0 z-50">
 			<div className="container mx-auto px-4 py-4">
 				<div className="flex items-center justify-between">
 					<div className="flex items-center gap-3">
-						<Activity className="w-8 h-8 text-blue-600" />
+						<Activity className="w-8 h-8 text-black dark:text-white" />
 						<div>
 							<h1 className="text-xl font-bold text-gray-900 dark:text-white">{title}</h1>
 							{demoMode && (
@@ -29,9 +29,7 @@ export default function Header({ title, connected = false, demoMode = false }: H
 					<div className="flex items-center gap-4">
 						{connected !== undefined && (
 							<div className="flex items-center gap-2">
-								<div
-									className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'} animate-pulse`}
-								/>
+								<div className={`w-2 h-2 rounded-full ${connected ? 'bg-white dark:bg-white' : 'bg-black dark:bg-black'} animate-pulse`} />
 								<span className="text-sm text-muted-foreground">
 									{connected ? 'Connected' : 'Disconnected'}
 								</span>

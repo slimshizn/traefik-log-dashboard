@@ -23,12 +23,12 @@ export default function PieChart({
   labels, 
   data, 
   backgroundColor = [
-    'rgba(59, 130, 246, 0.8)',
-    'rgba(16, 185, 129, 0.8)',
-    'rgba(245, 158, 11, 0.8)',
-    'rgba(239, 68, 68, 0.8)',
-    'rgba(139, 92, 246, 0.8)',
-    'rgba(236, 72, 153, 0.8)',
+    'rgba(0,0,0,0.85)',
+    'rgba(0,0,0,0.65)',
+    'rgba(0,0,0,0.45)',
+    'rgba(0,0,0,0.25)',
+    'rgba(0,0,0,0.15)',
+    'rgba(0,0,0,0.05)'
   ],
   height = 300 
 }: PieChartProps) {
@@ -40,7 +40,7 @@ export default function PieChart({
       {
         data,
         backgroundColor,
-        borderColor: backgroundColor.map(color => color.replace('0.8', '1')),
+        borderColor: backgroundColor.map(color => color.replace(/0\.[0-9]+\)/, '1)')),
         borderWidth: 2,
       },
     ],

@@ -10,7 +10,7 @@ interface ResponseTimeCardProps {
 
 export default function ResponseTimeCard({ metrics }: ResponseTimeCardProps) {
 	return (
-		<Card title="Response Time" icon={<Clock className="w-5 h-5 text-green-600" />}>
+		<Card title="Response Time" icon={<Clock className="w-5 h-5 text-black dark:text-white" />}>
 			<div className="space-y-2">
 				<div className="text-3xl font-bold text-gray-900 dark:text-white">{metrics.average.toFixed(0)}ms</div>
 				<div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
