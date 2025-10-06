@@ -1,31 +1,20 @@
-import * as React from "react"
-import { cn } from "@/lib/utils"
+import React from 'react';
 
-interface DashboardCardProps extends React.HTMLAttributes<HTMLDivElement> {
-  title?: string;
+interface DashboardCardProps {
+  title: string;
   icon?: React.ReactNode;
+  children: React.ReactNode;
+  className?: string;
 }
 
-const DashboardCard = React.forwardRef<HTMLDivElement, DashboardCardProps>(
-  ({ className, title, icon, children, ...props }, ref) => (
-    <div
-      ref={ref}
-      className={cn(
-        "rounded-lg border bg-card text-card-foreground shadow-sm p-6",
-        className
-      )}
-      {...props}
-    >
-      {(title || icon) && (
-        <div className="flex items-center gap-2 mb-4">
-          {icon}
-          {title && <h3 className="text-lg font-semibold">{title}</h3>}
-        </div>
-      )}
-      {children}
+export default function DashboardCard({ title, icon, children, className = '' }: DashboardCardProps) {
+  return (
+    <div className={`bg-white border border-gray-200 rounded-lg p-6 hover:border-gray-300 transition-colors ${className}`}>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">{title}</h3>
+        {icon && <div className="text-gray-900">{icon}</div>}
+      </div>
+      <div>{children}</div>
     </div>
-  )
-)
-DashboardCard.displayName = "DashboardCard"
-
-export default DashboardCard
+  );
+}

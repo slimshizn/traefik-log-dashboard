@@ -5,26 +5,25 @@ import Card from '@/components/ui/DashboardCard';
 import { ResponseTimeMetrics } from '@/lib/types';
 
 interface ResponseTimeCardProps {
-	metrics: ResponseTimeMetrics;
+  metrics: ResponseTimeMetrics;
 }
 
 export default function ResponseTimeCard({ metrics }: ResponseTimeCardProps) {
-	return (
-		<Card title="Response Time" icon={<Clock className="w-5 h-5 text-black dark:text-white" />}>
-			<div className="space-y-2">
-				<div className="text-3xl font-bold text-gray-900 dark:text-white">{metrics.average.toFixed(0)}ms</div>
-				<div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
-					<div>
-						<span className="text-xs">P95:</span> {metrics.p95.toFixed(0)}ms
-					</div>
-					<div>
-						<span className="text-xs">P99:</span> {metrics.p99.toFixed(0)}ms
-					</div>
-				</div>
-				{metrics.change !== 0 && (
-					<div className={`text-sm ${metrics.change < 0 ? 'text-green-600' : 'text-red-600'}`}>{metrics.change < 0 ? '↓' : '↑'} {Math.abs(metrics.change).toFixed(1)}%</div>
-				)}
-			</div>
-		</Card>
-	);
+  return (
+    <Card title="Response Time" icon={<Clock className="w-5 h-5" />}>
+      <div className="space-y-3">
+        <div className="text-4xl font-bold text-gray-900">{metrics.average.toFixed(0)}ms</div>
+        <div className="grid grid-cols-2 gap-3 pt-2 border-t border-gray-100">
+          <div>
+            <div className="text-xs text-gray-500 uppercase">P95</div>
+            <div className="text-sm font-semibold text-gray-900">{metrics.p95.toFixed(0)}ms</div>
+          </div>
+          <div>
+            <div className="text-xs text-gray-500 uppercase">P99</div>
+            <div className="text-sm font-semibold text-gray-900">{metrics.p99.toFixed(0)}ms</div>
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
 }

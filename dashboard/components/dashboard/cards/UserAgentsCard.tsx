@@ -1,54 +1,55 @@
 'use client';
 
-import { Monitor } from 'lucide-react';
+import { Users } from 'lucide-react';
 import Card from '@/components/ui/DashboardCard';
 import { UserAgentMetrics } from '@/lib/types';
-import { formatNumber } from '@/lib/utils';
 
 interface UserAgentsCardProps {
-	userAgents: UserAgentMetrics[];
+  userAgents: UserAgentMetrics[];
 }
 
 export default function UserAgentsCard({ userAgents }: UserAgentsCardProps) {
-	if (userAgents.length === 0) {
-		return (
-			<Card title="User Agents (Browsers)" icon={<Monitor className="w-5 h-5 text-indigo-600" />}>
-				<div className="text-center py-8 text-muted-foreground">No user agent data available</div>
-			</Card>
-		);
-	}
+  if (userAgents.length === 0) {
+    return (
+      <Card title="User Agents" icon={<Users className="w-5 h-5" />}>
+        <div className="text-center py-8 text-gray-400">No user agent data available</div>
+      </Card>
+    );
+  }
 
-	const maxCount = Math.max(...userAgents.map(ua => ua.count));
+  return (
+    <Card title="User Agents" icon={<Users className="w-5 h-5" />}>
+      <div className="space-y-3">
+        {userAgents.slice(0, 8).map((ua, index) => (
+          <div key={index} className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-medium text-gray-900">{getBrowserIcon(ua.browser)} {ua.browser}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-gray-600">{ua.count}</span>
+                <span className="text-xs text-gray-500">({ua.percentage.toFixed(1)}%)</span>
+              </div>
+            </div>
+            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-gray-900 transition-all duration-300" 
+                style={{ width: `${ua.percentage}%` }} 
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
 
-	// Browser colors
-	const browserColors: Record<string, string> = {
-		Chrome: 'bg-yellow-500',
-		Safari: 'bg-blue-500',
-		Firefox: 'bg-orange-500',
-		Edge: 'bg-cyan-500',
-		Opera: 'bg-red-500',
-		IE: 'bg-blue-600',
-		Unknown: 'bg-gray-500',
-	};
-
-	return (
-		<Card title="User Agents (Browsers)" icon={<Monitor className="w-5 h-5 text-indigo-600" />}>
-			<div className="space-y-3">
-				{userAgents.map((ua, index) => (
-					<div key={index} className="space-y-1">
-						<div className="flex items-center justify-between text-sm">
-							<span className="font-medium">{ua.browser}</span>
-							<div className="flex items-center gap-3 text-xs text-muted-foreground">
-								<span>{formatNumber(ua.count)}</span>
-								<span className="w-12 text-right">{ua.percentage.toFixed(1)}%</span>
-							</div>
-						</div>
-						<div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-							<div className={`h-full transition-all ${browserColors[ua.browser] || 'bg-gray-500'}`} style={{ width: `${(ua.count / maxCount) * 100}%` }} />
-						</div>
-					</div>
-				))}
-			</div>
-		</Card>
-	);
+function getBrowserIcon(browser: string): string {
+  const icons: { [key: string]: string } = {
+    'Chrome': '🌐',
+    'Firefox': '🦊',
+    'Safari': '🧭',
+    'Edge': '🔷',
+    'Opera': '⭕',
+    'Unknown': '❓',
+  };
+  return icons[browser] || '🌐';
 }

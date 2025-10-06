@@ -3,52 +3,56 @@
 import { MapPin } from 'lucide-react';
 import Card from '@/components/ui/DashboardCard';
 import { GeoLocation } from '@/lib/types';
-import { formatNumber } from '@/lib/utils';
 
 interface GeoMapCardProps {
-	locations: GeoLocation[];
+  locations: GeoLocation[];
 }
 
 export default function GeoMapCard({ locations }: GeoMapCardProps) {
-	if (locations.length === 0) {
-		return (
-			<Card title="Geographic Distribution" icon={<MapPin className="w-5 h-5 text-orange-600" />}>
-				<div className="text-center py-8 text-muted-foreground">No geographic data available</div>
-			</Card>
-		);
-	}
+  if (locations.length === 0) {
+    return (
+      <Card title="Geographic Distribution" icon={<MapPin className="w-5 h-5" />}>
+        <div className="text-center py-8 text-gray-400">No geographic data available</div>
+      </Card>
+    );
+  }
 
-	const topLocations = locations.filter(loc => loc.country !== 'Unknown' && loc.country !== 'Private Network').slice(0, 10);
-	const maxCount = Math.max(...topLocations.map(loc => loc.count));
-	const totalRequests = locations.reduce((sum, loc) => sum + loc.count, 0);
+  const maxCount = Math.max(...locations.map(l => l.count));
+  const topLocations = locations.slice(0, 10);
 
-	return (
-		<Card title="Geographic Distribution" icon={<MapPin className="w-5 h-5 text-orange-600" />}>
-			<div className="space-y-3">
-				{topLocations.map((location, index) => {
-					const percentage = (location.count / totalRequests) * 100;
-					return (
-						<div key={index} className="space-y-1">
-							<div className="flex items-center justify-between text-sm">
-								<span className="font-medium">{location.country}</span>
-								<div className="flex items-center gap-3 text-xs text-muted-foreground">
-									<span>{formatNumber(location.count)}</span>
-									<span className="w-12 text-right">{percentage.toFixed(1)}%</span>
-								</div>
-							</div>
-							<div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-								<div className="h-full bg-orange-500 transition-all" style={{ width: `${(location.count / maxCount) * 100}%` }} />
-							</div>
-						</div>
-					);
-				})}
-			</div>
+  return (
+    <Card title="Geographic Distribution" icon={<MapPin className="w-5 h-5" />}>
+      <div className="space-y-3">
+        {topLocations.map((location, index) => (
+          <div key={index} className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center gap-2 flex-1">
+                <span className="text-lg">{getCountryFlag(location.country)}</span>
+                <span className="font-medium text-gray-900">{location.country}</span>
+                {location.city && (
+                  <span className="text-gray-500">• {location.city}</span>
+                )}
+              </div>
+              <span className="text-gray-600">{location.count}</span>
+            </div>
+            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-gray-900 transition-all duration-300" 
+                style={{ width: `${(location.count / maxCount) * 100}%` }} 
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
 
-			{locations.length > 10 && (
-				<div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 text-sm text-muted-foreground text-center">
-					+{locations.length - 10} more countries
-				</div>
-			)}
-		</Card>
-	);
+function getCountryFlag(countryCode: string): string {
+  if (!countryCode || countryCode.length !== 2) return '🌍';
+  const codePoints = countryCode
+    .toUpperCase()
+    .split('')
+    .map(char => 127397 + char.charCodeAt(0));
+  return String.fromCodePoint(...codePoints);
 }
