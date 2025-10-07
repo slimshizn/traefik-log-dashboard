@@ -160,6 +160,7 @@ function calculateMetrics(logs: TraefikLog[]): DashboardMetrics {
     userAgents,
     timeline,
     errors,
+    logs, // <-- Ensure logs are included here
   };
 }
 
@@ -180,7 +181,6 @@ function calculateTimeSpan(logs: TraefikLog[]): number {
 
 function generateTimeline(logs: TraefikLog[]): { timestamp: string; value: number; label: string }[] {
   if (logs.length < 2) {
-    // Not enough data for a meaningful timeline
     return [];
   }
 
@@ -196,12 +196,10 @@ function generateTimeline(logs: TraefikLog[]): { timestamp: string; value: numbe
   const maxTime = Math.max(...timestamps);
   const points = 20;
 
-  // Ensure there's a time span of at least one minute to create intervals
   const effectiveMaxTime = Math.max(maxTime, minTime + 60 * 1000);
   const totalTimeSpan = effectiveMaxTime - minTime;
   const interval = Math.ceil(totalTimeSpan / points);
 
-  // Group logs into buckets
   const buckets: Map<number, number> = new Map();
   timestamps.forEach(logTime => {
     const bucketTime = Math.floor(logTime / interval) * interval;
@@ -213,7 +211,6 @@ function generateTimeline(logs: TraefikLog[]): { timestamp: string; value: numbe
 
   const timelineData = [];
 
-  // Create a complete timeline from the first log to the last, filling in any gaps
   for (let currentTime = startTime; currentTime <= endTime; currentTime += interval) {
     timelineData.push({
       timestamp: new Date(currentTime).toISOString(),
@@ -246,5 +243,6 @@ function getEmptyMetrics(): DashboardMetrics {
     userAgents: [],
     timeline: [],
     errors: [],
+    logs: [], // <-- Ensure empty metrics also has the logs property
   };
 }

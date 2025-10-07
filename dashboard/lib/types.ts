@@ -205,6 +205,7 @@ export interface DashboardMetrics {
   userAgents: UserAgentMetrics[];
   timeline: TimeSeriesPoint[];
   errors: ErrorLog[];
+  logs: TraefikLog[]; // Include raw logs for RecentLogsTable
 }
 
 // Config Types

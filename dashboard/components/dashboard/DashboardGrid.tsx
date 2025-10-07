@@ -5,13 +5,16 @@ import RequestsCard from './cards/RequestsCard';
 import ResponseTimeCard from './cards/ResponseTimeCard';
 import StatusCodesCard from './cards/StatusCodesCard';
 import TopRoutesCard from './cards/TopRoutesCard';
-import BackendsCard from './cards/BackendsCard';
+import BackendsCard from './cards/BackendsCard'; // This is used for "Top Services"
 import RoutersCard from './cards/RoutersCard';
-import GeoMapCard from './cards/GeoMapCard';
-import ErrorsCard from './cards/ErrorsCard';
-import UserAgentsCard from './cards/UserAgentsCard';
+import GeographicDistributionCard from './cards/GeographicDistributionCard';
+import TopRequestAddressesCard from './cards/TopRequestAddressesCard';
+import TopRequestHostsCard from './cards/TopRequestHostsCard';
+import TopClientIPsCard from './cards/TopClientIPsCard';
+import RecentLogsTable from './cards/RecentLogsTable';
+import StatusCodeDistributionCard from './cards/StatusCodeDistributionCard';
 import TimelineCard from './cards/TimelineCard';
-import RecentLogsTable from './cards/RecentLogsTable'; // Import the new table
+
 
 interface DashboardGridProps {
   metrics: DashboardMetrics;
@@ -19,62 +22,58 @@ interface DashboardGridProps {
 }
 
 export default function DashboardGrid({ metrics, demoMode = false }: DashboardGridProps) {
-  console.log('Dashboard Metrics:', {
-    requests: metrics.requests.total,
-    routes: metrics.topRoutes.length,
-    backends: metrics.backends.length,
-    routers: metrics.routers.length,
-    userAgents: metrics.userAgents.length,
-    geoLocations: metrics.geoLocations.length,
-    timeline: metrics.timeline.length,
-    errors: metrics.errors.length,
-  });
-
   return (
     <div className="space-y-6">
-      {/* Top Row - Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Top Row: Key Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         <RequestsCard metrics={metrics.requests} />
         <ResponseTimeCard metrics={metrics.responseTime} />
-        <StatusCodesCard metrics={metrics.statusCodes} />
+        {/* The following are conceptual cards from your image, mapped to existing components */}
+        <Card title="Avg Response Time" icon={<div />} className="text-center">
+            <div className="text-4xl font-bold">{metrics.responseTime.average.toFixed(0)}ms</div>
+        </Card>
+        <Card title="Error Rate" icon={<div />} className="text-center">
+            <div className="text-4xl font-bold">{metrics.statusCodes.errorRate.toFixed(1)}%</div>
+        </Card>
+        <Card title="Active Services" icon={<div />} className="text-center">
+            <div className="text-4xl font-bold">{metrics.backends.length}</div>
+        </Card>
       </div>
 
-      {/* Timeline */}
-      <TimelineCard timeline={metrics.timeline} />
-
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Second Row: Status, Services */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-1">
+          <StatusCodeDistributionCard metrics={metrics.statusCodes} />
+        </div>
+        <div className="lg:col-span-2">
+          <BackendsCard backends={metrics.backends} />
+        </div>
+      </div>
+      
+      {/* Third Row: Routers, Addresses, Hosts, IPs */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <TopRoutesCard routes={metrics.topRoutes} />
-        <BackendsCard backends={metrics.backends} />
+        <TopRequestAddressesCard addresses={metrics.topRequestAddresses} />
+        <TopRequestHostsCard hosts={metrics.topRequestHosts} />
+        <TopClientIPsCard clients={metrics.topClientIPs} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <RoutersCard routers={metrics.routers} />
-        <UserAgentsCard userAgents={metrics.userAgents} />
-      </div>
+      {/* Fourth Row: Geographic Distribution */}
+      <GeographicDistributionCard locations={metrics.geoLocations} />
 
-      {/* Geographic Map */}
-      <GeoMapCard locations={metrics.geoLocations} />
-
-      {/* Recent Logs Table */}
-      <div className="col-span-1 lg:col-span-3">
+      {/* Final Row: Recent Logs Table */}
+      <div className="col-span-1 lg:col-span-full">
         <RecentLogsTable logs={metrics.logs} />
       </div>
 
-      {/* Errors - Always show, even if empty */}
-      {metrics.errors && metrics.errors.length > 0 && (
-        <ErrorsCard errors={metrics.errors} />
-      )}
-
-
-
-      {/* Debug Info - Remove after testing */}
-      {demoMode && (
-        <div className="bg-gray-100 border border-gray-300 rounded-lg p-4 text-xs">
-          <div className="font-semibold mb-2">Debug Info:</div>
-          <pre>{JSON.stringify(metrics, null, 2).substring(0, 500)}...</pre>
-        </div>
-      )}
     </div>
   );
 }
+
+// A simple placeholder Card component to make the layout work like in the image
+const Card = ({ title, children, className }: { title: string, icon: React.ReactNode, children: React.ReactNode, className?: string }) => (
+    <div className={`bg-white border border-gray-200 rounded-lg p-4 ${className}`}>
+        <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">{title}</h3>
+        {children}
+    </div>
+);
