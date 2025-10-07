@@ -178,38 +178,54 @@ function calculateTimeSpan(logs: TraefikLog[]): number {
   return (max - min) / 1000; // Convert to seconds
 }
 
-function generateTimeline(logs: TraefikLog[]) {
-  const now = new Date();
-  const points = 20;
-  const interval = 3 * 60 * 1000; // 3 minutes
-
-  const buckets: { [key: string]: number } = {};
-
-  for (let i = 0; i < points; i++) {
-    const time = new Date(now.getTime() - (points - i - 1) * interval);
-    const key = time.toISOString();
-    buckets[key] = 0;
+function generateTimeline(logs: TraefikLog[]): { timestamp: string; value: number; label: string }[] {
+  if (logs.length < 2) {
+    // Not enough data for a meaningful timeline
+    return [];
   }
 
-  logs.forEach(log => {
-    const logTime = new Date(log.StartUTC || log.StartLocal);
-    const bucketTime = new Date(
-      Math.floor(logTime.getTime() / interval) * interval
-    );
-    const key = bucketTime.toISOString();
-    if (buckets[key] !== undefined) {
-      buckets[key]++;
-    }
+  const timestamps = logs
+    .map(l => new Date(l.StartUTC || l.StartLocal).getTime())
+    .filter(t => !isNaN(t));
+
+  if (timestamps.length < 2) {
+    return [];
+  }
+
+  const minTime = Math.min(...timestamps);
+  const maxTime = Math.max(...timestamps);
+  const points = 20;
+
+  // Ensure there's a time span of at least one minute to create intervals
+  const effectiveMaxTime = Math.max(maxTime, minTime + 60 * 1000);
+  const totalTimeSpan = effectiveMaxTime - minTime;
+  const interval = Math.ceil(totalTimeSpan / points);
+
+  // Group logs into buckets
+  const buckets: Map<number, number> = new Map();
+  timestamps.forEach(logTime => {
+    const bucketTime = Math.floor(logTime / interval) * interval;
+    buckets.set(bucketTime, (buckets.get(bucketTime) || 0) + 1);
   });
 
-  return Object.entries(buckets).map(([timestamp, value]) => ({
-    timestamp,
-    value,
-    label: new Date(timestamp).toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit',
-    }),
-  }));
+  const startTime = Math.floor(minTime / interval) * interval;
+  const endTime = Math.floor(maxTime / interval) * interval;
+
+  const timelineData = [];
+
+  // Create a complete timeline from the first log to the last, filling in any gaps
+  for (let currentTime = startTime; currentTime <= endTime; currentTime += interval) {
+    timelineData.push({
+      timestamp: new Date(currentTime).toISOString(),
+      value: buckets.get(currentTime) || 0,
+      label: new Date(currentTime).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+    });
+  }
+
+  return timelineData;
 }
 
 function getEmptyMetrics(): DashboardMetrics {
