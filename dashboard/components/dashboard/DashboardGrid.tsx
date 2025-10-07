@@ -11,6 +11,7 @@ import GeoMapCard from './cards/GeoMapCard';
 import ErrorsCard from './cards/ErrorsCard';
 import UserAgentsCard from './cards/UserAgentsCard';
 import TimelineCard from './cards/TimelineCard';
+import RecentLogsTable from './cards/RecentLogsTable'; // Import the new table
 
 interface DashboardGridProps {
   metrics: DashboardMetrics;
@@ -55,10 +56,17 @@ export default function DashboardGrid({ metrics, demoMode = false }: DashboardGr
       {/* Geographic Map */}
       <GeoMapCard locations={metrics.geoLocations} />
 
+      {/* Recent Logs Table */}
+      <div className="col-span-1 lg:col-span-3">
+        <RecentLogsTable logs={metrics.logs} />
+      </div>
+
       {/* Errors - Always show, even if empty */}
       {metrics.errors && metrics.errors.length > 0 && (
         <ErrorsCard errors={metrics.errors} />
       )}
+
+
 
       {/* Debug Info - Remove after testing */}
       {demoMode && (
