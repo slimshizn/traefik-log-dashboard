@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react';
 import Dashboard from '@/components/dashboard/Dashboard';
 import { TraefikLog } from '@/lib/types';
-import Header from '@/components/ui/Header';
 import { parseTraefikLogs } from '@/lib/traefik-parser';
 import { Activity } from 'lucide-react';
 
