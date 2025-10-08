@@ -6,6 +6,7 @@ import * as topojson from 'topojson-client';
 import { GeoLocation } from '@/lib/types';
 import { MapPin } from 'lucide-react';
 import Card from '@/components/ui/DashboardCard';
+import { FeatureCollection } from 'geojson'; // Import the correct type
 
 interface Props {
   locations: GeoLocation[];
@@ -44,7 +45,7 @@ export default function InteractiveGeoMap({ locations }: Props) {
     d3.json('/world-map.json').then((world: any) => {
       svg.append('g')
         .selectAll('path')
-        .data(topojson.feature(world, world.objects.countries).features)
+        .data((topojson.feature(world, world.objects.countries) as FeatureCollection).features)
         .enter().append('path')
         .attr('d', path)
         .attr('fill', 'hsl(var(--muted))')
