@@ -98,13 +98,13 @@ export default function InteractiveGeoMap({ locations }: Props) {
           .data(validLocations)
           .join('circle')
           .attr('cx', d => {
-            if (d.longitude === undefined || d.latitude === undefined) return 0;
-            const coords = projection([d.longitude, d.latitude]);
+            // Safe to use ! since validLocations filters out undefined
+            const coords = projection([d.longitude!, d.latitude!]);
             return coords ? coords[0] : 0;
           })
           .attr('cy', d => {
-            if (d.longitude === undefined || d.latitude === undefined) return 0;
-            const coords = projection([d.longitude, d.latitude]);
+            // Safe to use ! since validLocations filters out undefined  
+            const coords = projection([d.longitude!, d.latitude!]);
             return coords ? coords[1] : 0;
           })
           .attr('r', d => radiusScale(d.count))
