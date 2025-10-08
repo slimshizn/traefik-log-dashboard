@@ -70,7 +70,7 @@ export default function InteractiveGeoMap({ locations }: Props) {
         const countries = topojson.feature(
           worldData,
           worldData.objects.countries
-        ) as GeoJSON.FeatureCollection;
+        ) as unknown as GeoJSON.FeatureCollection;
 
         // Draw countries
         svg.append('g')
