@@ -3,15 +3,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import * as topojson from 'topojson-client';
+import { GeoLocation } from '@/lib/types';
 import { MapPin } from 'lucide-react';
 import Card from '@/components/ui/DashboardCard';
-
-interface GeoLocation {
-  country: string;
-  latitude: number | null;
-  longitude: number | null;
-  count: number;
-}
 
 interface Props {
   locations: GeoLocation[];
@@ -58,7 +52,7 @@ export default function InteractiveGeoMap({ locations }: Props) {
 
     // Setup scales
     const validLocations = locations.filter(
-      d => d.longitude != null && d.latitude != null
+      d => d.longitude !== undefined && d.latitude !== undefined
     );
     const maxCount = d3.max(validLocations, d => d.count) || 1;
     const radiusScale = d3.scaleSqrt()
@@ -104,11 +98,13 @@ export default function InteractiveGeoMap({ locations }: Props) {
           .data(validLocations)
           .join('circle')
           .attr('cx', d => {
-            const coords = projection([d.longitude!, d.latitude!]);
+            if (d.longitude === undefined || d.latitude === undefined) return 0;
+            const coords = projection([d.longitude, d.latitude]);
             return coords ? coords[0] : 0;
           })
           .attr('cy', d => {
-            const coords = projection([d.longitude!, d.latitude!]);
+            if (d.longitude === undefined || d.latitude === undefined) return 0;
+            const coords = projection([d.longitude, d.latitude]);
             return coords ? coords[1] : 0;
           })
           .attr('r', d => radiusScale(d.count))
