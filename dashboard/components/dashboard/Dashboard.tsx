@@ -17,13 +17,22 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ logs, demoMode = false }: DashboardProps) {
-  const metrics = useMemo(() => {
-    if (logs.length === 0) {
-      return getEmptyMetrics();
-    }
+const metrics = useMemo(() => {
+  if (logs.length === 0) {
+    return getEmptyMetrics();
+  }
 
-    return calculateMetrics(logs);
-  }, [logs]);
+  // Sort logs by most recent first and keep latest 1000 entries
+  const sortedLogs = [...logs]
+    .sort((a, b) => {
+      const timeA = new Date(a.StartUTC || a.StartLocal).getTime();
+      const timeB = new Date(b.StartUTC || b.StartLocal).getTime();
+      return timeB - timeA; // Most recent first
+    })
+    .slice(0, 1000);
+
+  return calculateMetrics(sortedLogs);
+}, [logs]);
 
   return (
     <div className="container mx-auto px-4 py-6">

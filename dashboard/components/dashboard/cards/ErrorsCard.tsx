@@ -25,16 +25,16 @@ export default function ErrorsCard({ errors }: Props) {
 
   const recentErrors = errors.slice(0, 10);
 
-  const getLevelColor = (level: string) => {
-    switch (level.toLowerCase()) {
-      case 'error':
-        return 'bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800';
-      case 'warning':
-        return 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800';
-      default:
-        return 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-400 border-gray-200 dark:border-gray-700';
-    }
-  };
+const getLevelColor = (level: string) => {
+  switch (level.toLowerCase()) {
+    case 'error':
+      return 'bg-red-100 dark:bg-red-950 text-red-800 dark:text-red-200 border-red-300 dark:border-red-800 font-semibold';
+    case 'warning':
+      return 'bg-yellow-100 dark:bg-yellow-950 text-yellow-800 dark:text-yellow-200 border-yellow-300 dark:border-yellow-800 font-semibold';
+    default:
+      return 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border-gray-300 dark:border-gray-700 font-medium';
+  }
+};
 
   const formatTimestamp = (timestamp: string) => {
     try {
