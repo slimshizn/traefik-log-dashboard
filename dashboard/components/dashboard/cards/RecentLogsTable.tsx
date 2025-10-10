@@ -9,56 +9,64 @@ interface Props {
   logs: TraefikLog[];
 }
 
-// Define all possible columns matching old design
-const allColumns = [
-  { id: 'StartUTC', header: 'Time', defaultVisible: true },
-  { id: 'ClientHost', header: 'Client IP', defaultVisible: true },
-  { id: 'RequestMethod', header: 'Method', defaultVisible: true },
-  { id: 'RequestPath', header: 'Path', defaultVisible: true },
-  { id: 'DownstreamStatus', header: 'Status', defaultVisible: true },
-  { id: 'Duration', header: 'Resp. Time', defaultVisible: true },
-  { id: 'ServiceName', header: 'Service', defaultVisible: true },
-  { id: 'RouterName', header: 'Router', defaultVisible: true },
-  { id: 'RequestHost', header: 'Host', defaultVisible: false },
-  { id: 'RequestAddr', header: 'Request Addr', defaultVisible: false },
-  { id: 'ClientPort', header: 'Client Port', defaultVisible: false },
-  { id: 'RequestProtocol', header: 'Protocol', defaultVisible: false },
-  { id: 'DownstreamContentSize', header: 'Content Size', defaultVisible: false },
-  { id: 'OriginDuration', header: 'Origin Duration', defaultVisible: false },
-  { id: 'Overhead', header: 'Overhead', defaultVisible: false },
-  { id: 'request_User_Agent', header: 'User Agent', defaultVisible: false },
+const defaultColumns = [
+  { id: 'StartUTC', header: 'Time', width: 'w-32' },
+  { id: 'ClientHost', header: 'Client IP', width: 'w-36' },
+  { id: 'RequestMethod', header: 'Method', width: 'w-20' },
+  { id: 'RequestPath', header: 'Path', width: 'w-64' },
+  { id: 'DownstreamStatus', header: 'Status', width: 'w-20' },
+  { id: 'Duration', header: 'Resp. Time', width: 'w-24' },
+  { id: 'ServiceName', header: 'Service', width: 'w-40' },
+  { id: 'RouterName', header: 'Router', width: 'w-40' },
+];
+
+const optionalColumns = [
+  { id: 'RequestHost', header: 'Host' },
+  { id: 'RequestAddr', header: 'Request Addr' },
+  { id: 'ClientPort', header: 'Client Port' },
+  { id: 'RequestProtocol', header: 'Protocol' },
+  { id: 'DownstreamContentSize', header: 'Content Size' },
+  { id: 'OriginDuration', header: 'Origin Duration' },
+  { id: 'Overhead', header: 'Overhead' },
+  { id: 'request_User_Agent', header: 'User Agent' },
 ];
 
 export default function RecentLogsTable({ logs }: Props) {
-  const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(allColumns.map(c => [c.id, c.defaultVisible]))
-  );
+  const [visibleOptionalColumns, setVisibleOptionalColumns] = useState<Set<string>>(new Set());
 
   const toggleColumn = (id: string) => {
-    setVisibleColumns(prev => ({ ...prev, [id]: !prev[id] }));
+    setVisibleOptionalColumns(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
   };
 
-  const visibleColumnDefs = allColumns.filter(c => visibleColumns[c.id]);
+  const visibleColumns = [
+    ...defaultColumns,
+    ...optionalColumns.filter(col => visibleOptionalColumns.has(col.id))
+  ];
 
-  // Sort logs by most recent first and take latest 1000
   const sortedLogs = useMemo(() => {
     return [...logs]
       .sort((a, b) => {
         const timeA = new Date(a.StartUTC || a.StartLocal).getTime();
         const timeB = new Date(b.StartUTC || b.StartLocal).getTime();
-        return timeB - timeA; // Most recent first
+        return timeB - timeA;
       })
-      .slice(0, 1000); // Keep only latest 1000 entries
+      .slice(0, 1000);
   }, [logs]);
 
-  // Format duration from nanoseconds to milliseconds
   const formatDuration = (durationNs: number): string => {
     if (!durationNs) return 'N/A';
     const ms = durationNs / 1000000;
-    return `${ms.toFixed(0)}ms`;
+    return `${ms.toFixed(1)}ms`;
   };
 
-  // Format bytes
   const formatBytes = (bytes: number): string => {
     if (!bytes) return 'N/A';
     if (bytes < 1024) return `${bytes}B`;
@@ -66,82 +74,72 @@ export default function RecentLogsTable({ logs }: Props) {
     return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
   };
 
-  // Get status color
   const getStatusColor = (status: number): string => {
-    if (status >= 200 && status < 300) return 'text-green-600 dark:text-green-400 font-medium';
-    if (status >= 300 && status < 400) return 'text-blue-600 dark:text-blue-400 font-medium';
-    if (status >= 400 && status < 500) return 'text-yellow-600 dark:text-yellow-400 font-medium';
-    if (status >= 500) return 'text-red-600 dark:text-red-400 font-medium';
-    return 'text-muted-foreground';
+    if (status >= 200 && status < 300) return 'text-green-600 font-semibold';
+    if (status >= 300 && status < 400) return 'text-blue-600 font-semibold';
+    if (status >= 400 && status < 500) return 'text-yellow-600 font-semibold';
+    if (status >= 500) return 'text-red-600 font-semibold';
+    return 'text-gray-600';
   };
 
-  // Format timestamp to match old design
-  const formatTime = (timestamp: string): string => {
-    try {
-      const date = new Date(timestamp);
-      return date.toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: true
-      });
-    } catch {
-      return timestamp;
+  const getMethodColor = (method: string): string => {
+    switch (method) {
+      case 'GET': return 'text-blue-600';
+      case 'POST': return 'text-green-600';
+      case 'PUT': return 'text-yellow-600';
+      case 'DELETE': return 'text-red-600';
+      case 'PATCH': return 'text-purple-600';
+      default: return 'text-gray-600';
     }
   };
 
-  // Render cell content based on column ID
   const renderCell = (log: TraefikLog, columnId: string) => {
     const value = log[columnId as keyof TraefikLog];
-
+    
     switch (columnId) {
       case 'StartUTC':
       case 'StartLocal':
-        return <span className="font-mono text-xs">{formatTime(log.StartUTC || log.StartLocal)}</span>;
+        try {
+          return <span className="text-xs text-gray-900">{new Date(value as string).toLocaleTimeString()}</span>;
+        } catch {
+          return <span className="text-xs text-gray-900">{String(value || 'N/A')}</span>;
+        }
       
       case 'DownstreamStatus':
-        return <span className={`font-mono font-semibold ${getStatusColor(log.DownstreamStatus)}`}>{log.DownstreamStatus}</span>;
+        return <span className={`text-xs font-semibold ${getStatusColor(value as number)}`}>{value || 'N/A'}</span>;
       
       case 'Duration':
-        return <span className="font-mono text-xs">{formatDuration(log.Duration)}</span>;
-      
       case 'OriginDuration':
-        return <span className="font-mono text-xs">{formatDuration(log.OriginDuration)}</span>;
-      
       case 'Overhead':
-        return <span className="font-mono text-xs">{formatDuration(log.Overhead)}</span>;
+        return <span className="font-mono text-xs text-gray-900">{formatDuration(value as number)}</span>;
       
       case 'DownstreamContentSize':
       case 'RequestContentSize':
-        return <span className="font-mono text-xs">{formatBytes(value as number)}</span>;
+        return <span className="font-mono text-xs text-gray-900">{formatBytes(value as number)}</span>;
       
       case 'ClientHost':
       case 'RequestAddr':
-        return <span className="font-mono text-xs">{value || 'N/A'}</span>;
+        return <span className="font-mono text-xs text-gray-900">{value || 'N/A'}</span>;
       
       case 'RequestMethod':
-        const methodColors: Record<string, string> = {
-          'GET': 'text-blue-600 dark:text-blue-400',
-          'POST': 'text-green-600 dark:text-green-400',
-          'PUT': 'text-yellow-600 dark:text-yellow-400',
-          'DELETE': 'text-red-600 dark:text-red-400',
-          'PATCH': 'text-purple-600 dark:text-purple-400',
-        };
-        const methodColor = methodColors[value as string] || 'text-muted-foreground';
-        return <span className={`font-semibold ${methodColor}`}>{value}</span>;
+        return <span className={`font-bold text-xs uppercase ${getMethodColor(value as string)}`}>{value}</span>;
       
       case 'RequestPath':
-        return <span className="font-mono text-xs truncate block max-w-xs" title={value as string}>{value || '/'}</span>;
+        return <span className="font-mono text-xs truncate max-w-md block text-gray-900" title={value as string}>{value || '/'}</span>;
+      
+      case 'ServiceName':
+      case 'RouterName':
+        return <span className="text-xs truncate block text-gray-900" title={value as string}>{value || 'N/A'}</span>;
       
       default:
-        return <span className="text-xs truncate block">{String(value || 'N/A')}</span>;
+        return <span className="text-xs truncate block text-gray-900">{String(value || 'N/A')}</span>;
     }
   };
 
   if (!logs || logs.length === 0) {
     return (
-      <Card title="Recent Logs" icon={<List className="w-5 h-5 text-muted-foreground" />}>
-        <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
+      <Card title="Recent Logs" icon={<List className="w-5 h-5 text-red-600" />}>
+        <div className="flex items-center justify-center py-12 text-sm text-gray-500">
           No logs available
         </div>
       </Card>
@@ -154,23 +152,23 @@ export default function RecentLogsTable({ logs }: Props) {
       icon={
         <div className="relative">
           <details className="relative">
-            <summary className="flex items-center gap-1 cursor-pointer text-xs bg-muted hover:bg-muted/80 px-3 py-1.5 rounded-md transition-colors list-none">
-              <span className="font-medium">Columns</span>
-              <ChevronDown className="w-3.5 h-3.5" />
+            <summary className="flex items-center gap-1 cursor-pointer text-xs font-medium bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-md transition-colors list-none">
+              <span className="text-red-700">Additional Columns</span>
+              <ChevronDown className="w-3.5 h-3.5 text-red-600" />
             </summary>
-            <div className="absolute right-0 mt-2 w-56 bg-popover border rounded-lg shadow-lg z-50 p-2 space-y-1 max-h-80 overflow-y-auto">
-              {allColumns.map(col => (
+            <div className="absolute right-0 mt-2 w-56 bg-white border border-red-200 rounded-lg shadow-lg z-50 p-2 space-y-1 max-h-80 overflow-y-auto">
+              {optionalColumns.map(col => (
                 <label
                   key={col.id}
-                  className="flex items-center gap-2 text-sm px-2 py-1.5 hover:bg-accent rounded-md cursor-pointer transition-colors"
+                  className="flex items-center gap-2 text-sm px-2 py-1.5 hover:bg-red-50 rounded-md cursor-pointer"
                 >
                   <input
                     type="checkbox"
-                    checked={!!visibleColumns[col.id]}
+                    checked={visibleOptionalColumns.has(col.id)}
                     onChange={() => toggleColumn(col.id)}
-                    className="h-4 w-4 rounded border-input"
+                    className="h-4 w-4 rounded border-red-300 text-red-600 focus:ring-red-500"
                   />
-                  <span>{col.header}</span>
+                  <span className="text-gray-700">{col.header}</span>
                 </label>
               ))}
             </div>
@@ -178,31 +176,30 @@ export default function RecentLogsTable({ logs }: Props) {
         </div>
       }
     >
-      <div className="overflow-x-auto -mx-6 px-6">
-        <table className="w-full text-sm border-collapse">
+      <div className="w-full overflow-x-auto">
+        <table className="w-full border-collapse">
           <thead>
-            <tr className="border-b">
-              {visibleColumnDefs.map(col => (
+            <tr className="border-b-2 border-red-200">
+              {visibleColumns.map(col => (
                 <th
                   key={col.id}
-                  className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground bg-muted/50 first:rounded-tl-lg last:rounded-tr-lg"
+                  className={`text-left py-3 px-3 text-xs font-bold uppercase tracking-wider text-gray-700 bg-red-50/50 ${(col as any).width || ''}`}
                 >
                   {col.header}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
+          <tbody>
             {sortedLogs.slice(0, 100).map((log, idx) => (
               <tr
                 key={`${log.StartUTC}-${idx}`}
-                className="hover:bg-muted/50 transition-colors"
+                className="border-b border-red-100 hover:bg-red-50/30 transition-colors"
               >
-                {visibleColumnDefs.map(col => (
+                {visibleColumns.map(col => (
                   <td
                     key={col.id}
-                    className="py-2.5 px-4 align-middle"
-                    title={String(log[col.id as keyof TraefikLog] || '')}
+                    className={`py-2.5 px-3 align-top ${(col as any).width || ''}`}
                   >
                     {renderCell(log, col.id)}
                   </td>
@@ -213,10 +210,13 @@ export default function RecentLogsTable({ logs }: Props) {
         </table>
       </div>
       
-      <div className="mt-4 pt-4 border-t flex items-center justify-between text-xs text-muted-foreground">
-        <span>Showing latest {Math.min(100, sortedLogs.length)} of {sortedLogs.length} logs (max 1000)</span>
+      <div className="mt-4 pt-4 border-t border-red-100 flex items-center justify-between text-xs text-gray-500">
+        <span>
+          Showing {Math.min(100, sortedLogs.length)} of {sortedLogs.length} logs 
+          {sortedLogs.length === 1000 && ' (max 1000)'}
+        </span>
         <span className="flex items-center gap-2">
-          <span className="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+          <span className="inline-block w-2 h-2 bg-red-600 rounded-full animate-pulse"></span>
           Live updates
         </span>
       </div>

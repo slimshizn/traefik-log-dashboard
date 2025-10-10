@@ -14,8 +14,8 @@ export default function StatusCodeDistributionCard({ metrics }: Props) {
 
   if (total === 0) {
     return (
-      <Card title="Status Code Distribution" icon={<BarChart3 className="w-5 h-5 text-muted-foreground" />}>
-        <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
+      <Card title="Status Code Distribution" icon={<BarChart3 className="w-5 h-5 text-red-600" />}>
+        <div className="flex items-center justify-center py-8 text-sm text-gray-500">
           No status code data available
         </div>
       </Card>
@@ -54,20 +54,19 @@ export default function StatusCodeDistributionCard({ metrics }: Props) {
   ];
 
   return (
-    <Card title="Status Code Distribution" icon={<BarChart3 className="w-5 h-5 text-muted-foreground" />}>
+    <Card title="Status Code Distribution" icon={<BarChart3 className="w-5 h-5 text-red-600" />}>
       <div className="space-y-4">
         {codes.map((code, idx) => (
           <div key={idx} className="space-y-2">
             <div className="flex items-center justify-between text-sm">
-              <span className="font-medium">{code.label}</span>
-              <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                <span className="font-mono">{formatNumber(code.count)}</span>
-                <span className={`font-semibold min-w-[3rem] text-right ${code.textColor}`}>
-                  {code.percentage.toFixed(1)}%
-                </span>
+              <span className="font-medium text-gray-900">{code.label}</span>
+              <div className="flex items-center gap-3 text-xs text-gray-500">
+                <span className="font-medium">{formatNumber(code.count)}</span>
+                <span className="text-gray-400">•</span>
+                <span className={`font-semibold ${code.textColor}`}>{code.percentage.toFixed(1)}%</span>
               </div>
             </div>
-            <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+            <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
               <div
                 className={`h-full ${code.color} transition-all duration-500 ease-out`}
                 style={{ width: `${code.percentage}%` }}
@@ -75,17 +74,6 @@ export default function StatusCodeDistributionCard({ metrics }: Props) {
             </div>
           </div>
         ))}
-
-        <div className="mt-6 pt-4 border-t flex items-center justify-between">
-          <span className="text-sm font-medium">Total Requests</span>
-          <span className="text-lg font-bold">{formatNumber(total)}</span>
-        </div>
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Error Rate</span>
-          <span className={`font-semibold ${metrics.errorRate > 5 ? 'text-red-600' : 'text-green-600'}`}>
-            {metrics.errorRate.toFixed(2)}%
-          </span>
-        </div>
       </div>
     </Card>
   );

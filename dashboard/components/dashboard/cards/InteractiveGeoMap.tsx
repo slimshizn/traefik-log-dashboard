@@ -1,200 +1,216 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
-import * as d3 from 'd3';
-import * as topojson from 'topojson-client';
-import { GeoLocation } from '@/lib/types';
-import { MapPin } from 'lucide-react';
+import { useState } from 'react';
+import { MapPin, Globe } from 'lucide-react';
 import Card from '@/components/ui/DashboardCard';
+import { GeoLocation } from '@/lib/types';
+import { formatNumber } from '@/lib/utils';
 
 interface Props {
   locations: GeoLocation[];
 }
 
-interface TooltipData {
-  country: string;
-  count: number;
-  x: number;
-  y: number;
-}
-
 export default function InteractiveGeoMap({ locations }: Props) {
-  const svgRef = useRef<SVGSVGElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [tooltip, setTooltip] = useState<TooltipData | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!svgRef.current || !containerRef.current || locations.length === 0) return;
-
-    // Clear any previous renders
-    d3.select(svgRef.current).selectAll('*').remove();
-    setError(null);
-
-    // Get container dimensions
-    const container = containerRef.current;
-    const width = container.clientWidth;
-    const height = width * 0.5;
-
-    // Setup SVG
-    const svg = d3.select(svgRef.current)
-      .attr('width', width)
-      .attr('height', height)
-      .attr('viewBox', `0 0 ${width} ${height}`)
-      .attr('preserveAspectRatio', 'xMidYMid meet');
-
-    // Setup projection
-    const projection = d3.geoMercator()
-      .scale(width / (2 * Math.PI))
-      .translate([width / 2, height / 1.5]);
-
-    const pathGenerator = d3.geoPath().projection(projection);
-
-    // Setup scales
-    const validLocations = locations.filter(
-      d => d.longitude !== undefined && d.latitude !== undefined
-    );
-    const maxCount = d3.max(validLocations, d => d.count) || 1;
-    const radiusScale = d3.scaleSqrt()
-      .domain([1, maxCount])
-      .range([3, 20]);
-
-    // Load and render world map
-    d3.json<any>('/world-map.json')
-      .then(worldData => {
-        if (!worldData || !worldData.objects || !worldData.objects.countries) {
-          throw new Error('Invalid world map data');
-        }
-
-        // Extract features from TopoJSON
-        const countries = topojson.feature(
-          worldData,
-          worldData.objects.countries
-        ) as unknown as GeoJSON.FeatureCollection;
-
-        // Draw countries
-        svg.append('g')
-          .attr('class', 'countries')
-          .selectAll('path')
-          .data(countries.features)
-          .join('path')
-          .attr('d', feature => {
-            const pathString = pathGenerator(feature);
-            return pathString || '';
-          })
-          .attr('fill', 'hsl(var(--muted))')
-          .attr('stroke', 'hsl(var(--border))')
-          .attr('stroke-width', 0.5);
-
-        // Draw location markers
-        const markers = svg.append('g')
-          .attr('class', 'markers')
-          .selectAll('circle')
-          .data(validLocations)
-          .join('circle')
-          .attr('cx', d => {
-            // Safe to use ! since validLocations filters out undefined
-            const coords = projection([d.longitude!, d.latitude!]);
-            return coords ? coords[0] : 0;
-          })
-          .attr('cy', d => {
-            // Safe to use ! since validLocations filters out undefined  
-            const coords = projection([d.longitude!, d.latitude!]);
-            return coords ? coords[1] : 0;
-          })
-          .attr('r', d => radiusScale(d.count))
-          .attr('fill', 'hsl(var(--primary))')
-          .attr('fill-opacity', 0.7)
-          .attr('stroke', 'hsl(var(--primary-foreground))')
-          .attr('stroke-width', 1.5)
-          .style('cursor', 'pointer')
-          .on('mouseenter', function(event, d) {
-            // Highlight the marker
-            d3.select(this)
-              .attr('fill-opacity', 1)
-              .attr('stroke-width', 2);
-
-            // Show tooltip
-            const [x, y] = d3.pointer(event, document.body);
-            setTooltip({
-              country: d.country,
-              count: d.count,
-              x,
-              y
-            });
-          })
-          .on('mousemove', function(event) {
-            const [x, y] = d3.pointer(event, document.body);
-            setTooltip(prev => prev ? { ...prev, x, y } : null);
-          })
-          .on('mouseleave', function() {
-            // Reset marker
-            d3.select(this)
-              .attr('fill-opacity', 0.7)
-              .attr('stroke-width', 1.5);
-
-            // Hide tooltip
-            setTooltip(null);
-          });
-
-        // Add subtle animation on load
-        markers
-          .attr('r', 0)
-          .transition()
-          .duration(800)
-          .delay((d, i) => i * 20)
-          .attr('r', d => radiusScale(d.count));
-
-      })
-      .catch(err => {
-        console.error('Error loading map data:', err);
-        setError('Failed to load map data');
-      });
-
-    // Cleanup function
-    return () => {
-      setTooltip(null);
-    };
-  }, [locations]);
-
-  if (locations.length === 0) {
+  if (!locations || locations.length === 0) {
     return (
-      <Card title="Geographic Distribution" icon={<MapPin className="w-5 h-5" />}>
-        <div className="text-center py-8 text-muted-foreground">
-          No geographic data available
-        </div>
+      <Card title="Interactive Geographic Map" icon={<Globe className="w-5 h-5 text-red-600" />}>
+        <div className="text-center py-8 text-gray-500">No geographic data available</div>
       </Card>
     );
   }
 
+  const validLocations = locations.filter(
+    loc => loc.country !== 'Unknown' && loc.country !== 'Private Network'
+  );
+  
+  const totalRequests = validLocations.reduce((sum, loc) => sum + loc.count, 0);
+  const maxCount = Math.max(...validLocations.map(loc => loc.count));
+
+  const topLocations = validLocations.slice(0, 15);
+  const selectedLocation = selectedCountry 
+    ? validLocations.find(loc => loc.country === selectedCountry)
+    : null;
+
+  const getCountryCode = (country: string): string => {
+    const codes: { [key: string]: string } = {
+      'United States': 'US',
+      'United Kingdom': 'GB',
+      'Germany': 'DE',
+      'France': 'FR',
+      'Japan': 'JP',
+      'China': 'CN',
+      'India': 'IN',
+      'Brazil': 'BR',
+      'Canada': 'CA',
+      'Australia': 'AU',
+      'Russia': 'RU',
+      'South Korea': 'KR',
+      'Spain': 'ES',
+      'Italy': 'IT',
+      'Netherlands': 'NL'
+    };
+    return codes[country] || 'XX';
+  };
+
+  const getHeatColor = (count: number): string => {
+    const intensity = (count / maxCount) * 100;
+    if (intensity > 75) return 'bg-red-600 border-red-700';
+    if (intensity > 50) return 'bg-red-500 border-red-600';
+    if (intensity > 25) return 'bg-red-400 border-red-500';
+    return 'bg-red-300 border-red-400';
+  };
+
+  const getTextColor = (count: number): string => {
+    const intensity = (count / maxCount) * 100;
+    if (intensity > 75) return 'text-red-600';
+    if (intensity > 50) return 'text-red-500';
+    if (intensity > 25) return 'text-red-400';
+    return 'text-red-300';
+  };
+
   return (
-    <Card title="Geographic Distribution" icon={<MapPin className="w-5 h-5" />}>
-      <div ref={containerRef} className="relative w-full">
-        {error ? (
-          <div className="text-center py-8 text-destructive">
-            {error}
+    <Card title="Interactive Geographic Map" icon={<Globe className="w-5 h-5 text-red-600" />}>
+      <div className="space-y-4">
+        <div className="bg-gradient-to-br from-red-50 to-white rounded-lg p-6 border border-red-200">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <div className="text-sm text-gray-600">Total Locations</div>
+              <div className="text-3xl font-bold text-red-600">{validLocations.length}</div>
+            </div>
+            <div className="text-right">
+              <div className="text-sm text-gray-600">Total Requests</div>
+              <div className="text-3xl font-bold text-gray-900">{formatNumber(totalRequests)}</div>
+            </div>
           </div>
-        ) : (
-          <svg ref={svgRef} className="w-full h-auto" />
-        )}
-        
-        {/* React-based tooltip */}
-        {tooltip && (
-          <div
-            className="fixed z-50 pointer-events-none"
-            style={{
-              left: `${tooltip.x + 10}px`,
-              top: `${tooltip.y - 10}px`,
-            }}
-          >
-            <div className="bg-popover text-popover-foreground border border-border rounded-md shadow-lg px-3 py-2 text-sm">
-              <div className="font-semibold">{tooltip.country}</div>
-              <div className="text-muted-foreground">
-                {tooltip.count.toLocaleString()} request{tooltip.count !== 1 ? 's' : ''}
+
+          <div className="grid grid-cols-5 gap-2">
+            {topLocations.map((location, idx) => {
+              const percentage = (location.count / totalRequests) * 100;
+              const isSelected = selectedCountry === location.country;
+              
+              return (
+                <button
+                  key={idx}
+                  onClick={() => setSelectedCountry(isSelected ? null : location.country)}
+                  className={`
+                    relative group p-3 rounded-lg border-2 transition-all transform hover:scale-105
+                    ${isSelected 
+                      ? 'bg-red-600 border-red-700 shadow-lg scale-105' 
+                      : `${getHeatColor(location.count)} hover:shadow-md`
+                    }
+                  `}
+                  title={`${location.country}: ${formatNumber(location.count)} requests (${percentage.toFixed(1)}%)`}
+                >
+                  <div className={`text-xs font-bold mb-1 ${isSelected ? 'text-white' : 'text-gray-700'}`}>
+                    {getCountryCode(location.country)}
+                  </div>
+                  <div className={`text-lg font-bold ${isSelected ? 'text-white' : 'text-gray-900'}`}>
+                    {(percentage).toFixed(0)}%
+                  </div>
+                  <div className={`text-xs ${isSelected ? 'text-red-100' : 'text-gray-600'}`}>
+                    {formatNumber(location.count)}
+                  </div>
+                  
+                  <div className="absolute inset-0 bg-red-600 opacity-0 group-hover:opacity-10 rounded-lg transition-opacity" />
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mt-4 flex items-center gap-2 text-xs">
+            <span className="text-gray-600">Heat:</span>
+            <div className="flex items-center gap-1 flex-1">
+              <div className="w-full h-2 bg-gradient-to-r from-red-300 via-red-500 to-red-600 rounded-full" />
+            </div>
+            <span className="text-gray-600">Low → High</span>
+          </div>
+        </div>
+
+        {selectedLocation && (
+          <div className="bg-red-50 rounded-lg p-4 border-2 border-red-600 animate-in fade-in slide-in-from-top-2">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                <MapPin className="w-6 h-6 text-white" />
+              </div>
+              <div className="flex-1">
+                <div className="text-lg font-bold text-gray-900 mb-1">
+                  {selectedLocation.country}
+                </div>
+                <div className="grid grid-cols-2 gap-3 mt-2">
+                  <div>
+                    <div className="text-xs text-gray-600">Requests</div>
+                    <div className="text-xl font-bold text-red-600">
+                      {formatNumber(selectedLocation.count)}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-600">Percentage</div>
+                    <div className="text-xl font-bold text-red-600">
+                      {((selectedLocation.count / totalRequests) * 100).toFixed(2)}%
+                    </div>
+                  </div>
+                </div>
+                {selectedLocation.latitude && selectedLocation.longitude && (
+                  <div className="mt-2 text-xs text-gray-600">
+                    <span className="font-mono">
+                      {selectedLocation.latitude.toFixed(4)}°, {selectedLocation.longitude.toFixed(4)}°
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         )}
+
+        <div className="space-y-2 max-h-64 overflow-y-auto">
+          {topLocations.map((location, idx) => {
+            const percentage = (location.count / totalRequests) * 100;
+            const isSelected = selectedCountry === location.country;
+            
+            return (
+              <button
+                key={idx}
+                onClick={() => setSelectedCountry(isSelected ? null : location.country)}
+                className={`
+                  w-full text-left p-3 rounded-lg border transition-all
+                  ${isSelected 
+                    ? 'bg-red-100 border-red-600 shadow-md' 
+                    : 'bg-white border-red-200 hover:bg-red-50 hover:border-red-300'
+                  }
+                `}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className={`inline-flex items-center justify-center w-6 h-6 text-xs font-bold rounded ${
+                      isSelected ? 'bg-red-600 text-white' : 'bg-red-50 text-red-600'
+                    }`}>
+                      {idx + 1}
+                    </span>
+                    <span className={`font-semibold ${isSelected ? 'text-red-600' : 'text-gray-900'}`}>
+                      {location.country}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="text-gray-600">{formatNumber(location.count)}</span>
+                    <span className={`font-bold ${getTextColor(location.count)}`}>
+                      {percentage.toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+                <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full transition-all duration-500 ${
+                      isSelected ? 'bg-red-600' : 'bg-red-500'
+                    }`}
+                    style={{ width: `${(location.count / maxCount) * 100}%` }}
+                  />
+                </div>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </Card>
   );
