@@ -232,11 +232,14 @@ function calculateMetrics(logs: TraefikLog[], geoLocations: GeoLocation[]): Dash
     'request_User_Agent'
   );
 const userAgents = Object.entries(userAgentGroups)
-  .map(([ua, uaLogs]) => ({
-    browser: parseUserAgent(ua), // Returns string directly
-    count: uaLogs.length,
-    percentage: (uaLogs.length / total) * 100,
-  }))
+  .map(([ua, uaLogs]) => {
+    const parsed = parseUserAgent(ua);
+    return {
+      browser: typeof parsed === 'string' ? parsed : parsed.browser, // ✅ Extract browser string
+      count: uaLogs.length,
+      percentage: (uaLogs.length / total) * 100,
+    };
+  })
   .sort((a, b) => b.count - a.count)
   .slice(0, 12);
 
