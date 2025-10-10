@@ -231,14 +231,17 @@ function calculateMetrics(logs: TraefikLog[], geoLocations: GeoLocation[]): Dash
     logs.filter(l => l.request_User_Agent),
     'request_User_Agent'
   );
-  const userAgents = Object.entries(userAgentGroups)
-    .map(([ua, uaLogs]) => ({
-      browser: parseUserAgent(ua),
+const userAgents = Object.entries(userAgentGroups)
+  .map(([ua, uaLogs]) => {
+    const parsed = parseUserAgent(ua);
+    return {
+      browser: typeof parsed === 'string' ? parsed : parsed.browser,
       count: uaLogs.length,
       percentage: (uaLogs.length / total) * 100,
-    }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 12);
+    };
+  })
+  .sort((a, b) => b.count - a.count)
+  .slice(0, 12);
 
   // Timeline - keep latest data points
   const timeline = generateTimeline(logs);
