@@ -270,11 +270,12 @@ function calculateMetrics(logs: TraefikLog[], geoLocations: GeoLocation[]): Dash
       perSecond,
       change: 0,
     },
-    responseTime: {
-      avg: avgDuration,
-      p95: p95Duration,
-      p99: p99Duration,
-    },
+  responseTime: {
+    average: avgDuration, 
+    p95: p95Duration,
+    p99: p99Duration,
+    change: 0,
+  },
     statusCodes: {
       status2xx,
       status3xx,
@@ -341,7 +342,7 @@ function generateTimeline(logs: TraefikLog[]) {
 function getEmptyMetrics(): DashboardMetrics {
   return {
     requests: { total: 0, perSecond: 0, change: 0 },
-    responseTime: { avg: 0, p95: 0, p99: 0 },
+    responseTime: { average: 0, p95: 0, p99: 0, change: 0 },
     statusCodes: { status2xx: 0, status3xx: 0, status4xx: 0, status5xx: 0, errorRate: 0 },
     routes: [],
     backends: [],

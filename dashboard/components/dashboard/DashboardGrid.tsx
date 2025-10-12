@@ -42,7 +42,7 @@ export default function DashboardGrid({ metrics, systemStats, demoMode = false }
         />
         <StatCard
           title="Response Time"
-          value={`${metrics.responseTime.avg.toFixed(0)}ms`}
+          value={`${metrics.responseTime.average.toFixed(0)}ms`}
           description={`P99: ${metrics.responseTime.p99.toFixed(0)}ms`}
           icon={<Clock className="h-5 w-5 text-red-600" />}
         />
