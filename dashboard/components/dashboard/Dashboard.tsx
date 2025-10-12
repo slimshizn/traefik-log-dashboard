@@ -270,12 +270,12 @@ function calculateMetrics(logs: TraefikLog[], geoLocations: GeoLocation[]): Dash
       perSecond,
       change: 0,
     },
-  responseTime: {
-    average: avgDuration, 
-    p95: p95Duration,
-    p99: p99Duration,
-    change: 0,
-  },
+    responseTime: {
+      average: avgDuration,
+      p95: p95Duration,
+      p99: p99Duration,
+      change: 0,
+    },
     statusCodes: {
       status2xx,
       status3xx,
@@ -311,32 +311,50 @@ function calculateTimeSpan(logs: TraefikLog[]): number {
   return span;
 }
 
-function generateTimeline(logs: TraefikLog[]) {
-  // Group logs by minute
-  const timeGroups = new Map<string, TraefikLog[]>();
+function generateTimeline(logs: TraefikLog[]): { timestamp: string; value: number; label: string }[] {
+  if (logs.length < 2) {
+    return [];
+  }
 
-  logs.forEach(log => {
-    const timestamp = new Date(log.StartUTC || log.StartLocal);
-    const minute = new Date(timestamp.getFullYear(), timestamp.getMonth(), timestamp.getDate(), 
-                            timestamp.getHours(), timestamp.getMinutes(), 0);
-    const key = minute.toISOString();
+  const timestamps = logs
+    .map(l => new Date(l.StartUTC || l.StartLocal).getTime())
+    .filter(t => !isNaN(t));
 
-    if (!timeGroups.has(key)) {
-      timeGroups.set(key, []);
-    }
-    timeGroups.get(key)!.push(log);
+  if (timestamps.length < 2) {
+    return [];
+  }
+
+  const minTime = Math.min(...timestamps);
+  const maxTime = Math.max(...timestamps);
+  const points = 20;
+
+  const effectiveMaxTime = Math.max(maxTime, minTime + 60 * 1000);
+  const totalTimeSpan = effectiveMaxTime - minTime;
+  const interval = Math.ceil(totalTimeSpan / points);
+
+  const buckets: Map<number, number> = new Map();
+  timestamps.forEach(logTime => {
+    const bucketTime = Math.floor(logTime / interval) * interval;
+    buckets.set(bucketTime, (buckets.get(bucketTime) || 0) + 1);
   });
 
-  // Convert to timeline array
-  return Array.from(timeGroups.entries())
-    .map(([time, timeLogs]) => ({
-      time,
-      requests: timeLogs.length,
-      errors: timeLogs.filter(l => l.DownstreamStatus >= 400).length,
-      avgDuration: calculateAverage(timeLogs.map(l => l.Duration / 1000000)),
-    }))
-    .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime())
-    .slice(-60); // Keep last 60 minutes
+  const startTime = Math.floor(minTime / interval) * interval;
+  const endTime = Math.floor(maxTime / interval) * interval;
+
+  const timelineData = [];
+
+  for (let currentTime = startTime; currentTime <= endTime; currentTime += interval) {
+    timelineData.push({
+      timestamp: new Date(currentTime).toISOString(),
+      value: buckets.get(currentTime) || 0,
+      label: new Date(currentTime).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+    });
+  }
+
+  return timelineData;
 }
 
 function getEmptyMetrics(): DashboardMetrics {
