@@ -26,7 +26,7 @@ env:
   REGISTRY_GHCR: ghcr.io
   REGISTRY_DOCKERHUB: docker.io
   GO_VERSION: '1.23'
-  NODE_VERSION: '18'
+  NODE_VERSION: '20'
 
 jobs:
   # Build and push Agent Docker image

@@ -1,4 +1,3 @@
-// dashboard/components/AgentFormModal.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -6,7 +5,6 @@ import { Agent } from '@/lib/types/agent';
 import { useAgents } from '@/lib/contexts/AgentContext';
 import { AgentConfigManager } from '@/lib/agent-config-manager';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { X, AlertCircle } from 'lucide-react';
 
 interface AgentFormModalProps {

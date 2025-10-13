@@ -9,11 +9,11 @@ import AgentSelector from './AgentSelector';
 import { useAgents } from '@/lib/contexts/AgentContext';
 
 interface HeaderProps {
-  title: string;
-  connected?: boolean;
-  demoMode?: boolean;
-  lastUpdate?: Date;
-  showAgentSelector?: boolean;
+  title: string;                // Required
+  connected?: boolean;          // Optional
+  demoMode?: boolean;           // Optional
+  lastUpdate?: Date | null;     // Optional
+  showAgentSelector?: boolean;  // Optional
 }
 
 export default function Header({ 

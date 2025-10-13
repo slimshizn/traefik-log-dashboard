@@ -1,4 +1,3 @@
-// dashboard/components/AgentBulkOperations.tsx
 'use client';
 
 import { useState } from 'react';
