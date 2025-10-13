@@ -5,7 +5,6 @@ import Dashboard from '@/components/dashboard/Dashboard';
 import Header from '@/components/ui/Header';
 import { TraefikLog } from '@/lib/types';
 import { parseTraefikLogs } from '@/lib/traefik-parser';
-import { Activity } from 'lucide-react';
 
 export default function DashboardPage() {
   const [logs, setLogs] = useState<TraefikLog[]>([]);
@@ -74,7 +73,10 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-red-50">
-          <Header title="TRAEFIK LOG DASHBOARD" connected={false} demoMode={false} />
+        <Header
+          title="TRAEFIK LOG DASHBOARD"
+          connected={false}
+        />
         <div className="container mx-auto px-4 py-8">
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
@@ -92,7 +94,6 @@ export default function DashboardPage() {
       <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-red-50">
         <Header
           title="TRAEFIK LOG DASHBOARD"
-          icon={<Activity className="w-8 h-8" />}
           connected={false}
         />
         <div className="container mx-auto px-4 py-8">
@@ -117,7 +118,6 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-red-50">
       <Header
         title="TRAEFIK LOG DASHBOARD"
-        icon={<Activity className="w-8 h-8" />}
         connected={connected}
         lastUpdate={lastUpdate}
       />
