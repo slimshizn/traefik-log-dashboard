@@ -28,7 +28,7 @@ import AgentHealthDashboard from '@/components/AgentHealthDashboard';
 type TabType = 'agents' | 'health' | 'bulk';
 
 export default function AgentSettingsPage() {
-  const { agents, selectedAgent, _selectAgent, deleteAgent, checkAgentStatus, _refreshAgents } = useAgents();
+  const { agents, selectedAgent, deleteAgent, checkAgentStatus } = useAgents();
   const [activeTab, setActiveTab] = useState<TabType>('agents');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
