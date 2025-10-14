@@ -1,7 +1,8 @@
+// dashboard/app/dashboard/page.tsx
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import Dashboard from '@/components/dashboard/Dashboard';
+import DashboardWithFilters from '@/components/dashboard/DashboardWithFilters'; 
 import Header from '@/components/ui/Header';
 import { TraefikLog } from '@/lib/types';
 import { parseTraefikLogs } from '@/lib/traefik-parser';
@@ -19,7 +20,6 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchLogs = async () => {
       try {
-        // FIX: Ensure position is always a valid number, default to -1 if undefined or invalid
         const position = positionRef.current ?? -1;
         
         const response = await fetch(
@@ -44,7 +44,6 @@ export default function DashboardPage() {
           });
         }
 
-        // FIX: Safely update position, ensuring it's always a valid number
         if (data.positions && data.positions.length > 0 && typeof data.positions[0].Position === 'number') {
           positionRef.current = data.positions[0].Position;
         }
@@ -61,10 +60,7 @@ export default function DashboardPage() {
       }
     };
 
-    // Initial fetch
     fetchLogs();
-
-    // Poll every 5 seconds
     const interval = setInterval(fetchLogs, 5000);
 
     return () => clearInterval(interval);
@@ -139,7 +135,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <Dashboard logs={logs} demoMode={false} />
+      <DashboardWithFilters logs={logs} demoMode={false} /> 
     </div>
   );
 }

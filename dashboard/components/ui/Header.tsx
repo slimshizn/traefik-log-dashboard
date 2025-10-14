@@ -2,11 +2,12 @@
 'use client';
 
 import Link from 'next/link';
-import { Activity, Home, Github, Settings } from 'lucide-react';
+import { Activity, Home, Github, Settings, Filter } from 'lucide-react';
 import { Button } from './button';
 import { Badge } from './badge';
 import AgentSelector from './AgentSelector';
 import { useAgents } from '@/lib/contexts/AgentContext';
+
 
 interface HeaderProps {
   title: string;                // Required
@@ -110,6 +111,21 @@ export default function Header({
                 <span className="hidden sm:inline">Home</span>
               </Link>
             </Button>
+
+            {/* Filter Settings Button (visible when not in demo mode) */}
+            {!demoMode && (
+              <Button
+                asChild
+                variant="secondary"
+                size="icon"
+                className="border-red-300 text-red-700 hover:bg-red-50"
+                title="Log Filters"
+              >
+                <Link href="/settings/filters">
+                  <Filter className="w-4 h-4" />
+                </Link>
+              </Button>
+            )}
 
             {/* Settings Button (visible only when not in demo mode) */}
             {!demoMode && showAgentSelector && (
