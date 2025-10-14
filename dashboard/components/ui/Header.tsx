@@ -111,6 +111,21 @@ export default function Header({
               </Link>
             </Button>
 
+            {/* Filter Settings Button (visible when not in demo mode) */}
+            {!demoMode && (
+              <Button
+                asChild
+                variant="secondary"
+                size="icon"
+                className="border-red-300 text-red-700 hover:bg-red-50"
+                title="Log Filters"
+              >
+                <Link href="/settings/filters">
+                  <Filter className="w-4 h-4" />
+                </Link>
+              </Button>
+            )}
+
             {/* Settings Button (visible only when not in demo mode) */}
             {!demoMode && showAgentSelector && (
               <Button

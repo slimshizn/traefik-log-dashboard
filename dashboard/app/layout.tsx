@@ -1,7 +1,7 @@
 // dashboard/app/layout.tsx
 import React from 'react';
 import './globals.css';
-import { AgentProvider } from '@/lib/contexts/AgentContext';
+import Providers from '@/components/providers/Providers'; // MODIFIED LINE 4
 
 export const metadata = {
   title: 'Traefik Log Dashboard',
@@ -16,11 +16,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <AgentProvider>
+        <Providers> 
           <div className="min-h-screen bg-gray-50">
             {children}
           </div>
-        </AgentProvider>
+        </Providers> 
       </body>
     </html>
   );
