@@ -7,12 +7,15 @@ interface SystemStats {
   cpu: {
     usage_percent: number;
     cores: number;
+    model?: string;
+    speed?: number;
   };
   memory: {
     total: number;
     used: number;
     used_percent: number;
     available: number;
+    free?: number;
   };
   disk: {
     total: number;
@@ -27,38 +30,46 @@ interface Props {
 }
 
 function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
+  if (!bytes || bytes === 0) return '0 B';
+  if (isNaN(bytes)) return 'N/A';
+  
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  const i = Math.floor(Math.log(Math.abs(bytes)) / Math.log(k));
+  
   return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
 }
 
 function getStatusColor(percent: number): string {
+  if (isNaN(percent)) return 'text-gray-600';
   if (percent >= 90) return 'text-red-600';
   if (percent >= 75) return 'text-yellow-600';
   return 'text-green-600';
 }
 
 function getProgressBarColor(percent: number): string {
+  if (isNaN(percent)) return 'bg-gray-500';
   if (percent >= 90) return 'bg-red-500';
   if (percent >= 75) return 'bg-yellow-500';
   return 'bg-green-500';
 }
 
 function ProgressBar({ percent }: { percent: number }) {
+  const safePercent = isNaN(percent) ? 0 : Math.min(100, Math.max(0, percent));
+  
   return (
     <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
       <div
-        className={`h-full ${getProgressBarColor(percent)} transition-all duration-300`}
-        style={{ width: `${Math.min(100, percent)}%` }}
+        className={`h-full ${getProgressBarColor(safePercent)} transition-all duration-300`}
+        style={{ width: `${safePercent}%` }}
       />
     </div>
   );
 }
 
 export function CPUCard({ stats }: Props) {
-  if (!stats || !stats.cpu) {
+  // Check if stats exist and have valid CPU data
+  if (!stats?.cpu || typeof stats.cpu.usage_percent !== 'number') {
     return (
       <Card title="CPU" icon={<Cpu className="w-5 h-5 text-blue-600" />}>
         <div className="text-center text-gray-500 py-4">
@@ -70,6 +81,7 @@ export function CPUCard({ stats }: Props) {
 
   const { cpu } = stats;
   const percent = cpu.usage_percent || 0;
+  const cores = cpu.cores || 0;
 
   return (
     <Card title="CPU Usage" icon={<Cpu className="w-5 h-5 text-blue-600" />}>
@@ -79,7 +91,7 @@ export function CPUCard({ stats }: Props) {
             {percent.toFixed(1)}%
           </div>
           <div className="text-sm text-gray-500 mb-1">
-            {cpu.cores} {cpu.cores === 1 ? 'core' : 'cores'}
+            {cores} {cores === 1 ? 'core' : 'cores'}
           </div>
         </div>
         
@@ -96,7 +108,8 @@ export function CPUCard({ stats }: Props) {
 }
 
 export function MemoryCard({ stats }: Props) {
-  if (!stats || !stats.memory) {
+  // Check if stats exist and have valid memory data
+  if (!stats?.memory || typeof stats.memory.used_percent !== 'number') {
     return (
       <Card title="Memory" icon={<MemoryStick className="w-5 h-5 text-purple-600" />}>
         <div className="text-center text-gray-500 py-4">
@@ -108,6 +121,9 @@ export function MemoryCard({ stats }: Props) {
 
   const { memory } = stats;
   const percent = memory.used_percent || 0;
+  const used = memory.used || 0;
+  const total = memory.total || 0;
+  const available = memory.available || 0;
 
   return (
     <Card title="Memory Usage" icon={<MemoryStick className="w-5 h-5 text-purple-600" />}>
@@ -121,9 +137,9 @@ export function MemoryCard({ stats }: Props) {
         <ProgressBar percent={percent} />
         
         <div className="text-xs text-gray-600">
-          <div>{formatBytes(memory.used)} / {formatBytes(memory.total)}</div>
+          <div>{formatBytes(used)} / {formatBytes(total)}</div>
           <div className="text-gray-500 mt-1">
-            {formatBytes(memory.available)} available
+            {formatBytes(available)} available
           </div>
         </div>
         
@@ -138,7 +154,8 @@ export function MemoryCard({ stats }: Props) {
 }
 
 export function DiskCard({ stats }: Props) {
-  if (!stats || !stats.disk) {
+  // Check if stats exist and have valid disk data
+  if (!stats?.disk || typeof stats.disk.used_percent !== 'number') {
     return (
       <Card title="Disk" icon={<HardDrive className="w-5 h-5 text-indigo-600" />}>
         <div className="text-center text-gray-500 py-4">
@@ -150,6 +167,9 @@ export function DiskCard({ stats }: Props) {
 
   const { disk } = stats;
   const percent = disk.used_percent || 0;
+  const used = disk.used || 0;
+  const total = disk.total || 0;
+  const free = disk.free || 0;
 
   return (
     <Card title="Disk Usage" icon={<HardDrive className="w-5 h-5 text-indigo-600" />}>
@@ -163,9 +183,9 @@ export function DiskCard({ stats }: Props) {
         <ProgressBar percent={percent} />
         
         <div className="text-xs text-gray-600">
-          <div>{formatBytes(disk.used)} / {formatBytes(disk.total)}</div>
+          <div>{formatBytes(used)} / {formatBytes(total)}</div>
           <div className="text-gray-500 mt-1">
-            {formatBytes(disk.free)} free
+            {formatBytes(free)} free
           </div>
         </div>
         
