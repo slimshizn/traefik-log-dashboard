@@ -49,29 +49,29 @@ The platform supports a **multi-agent architecture** where you can deploy multip
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                     Traefik Instances                        │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │ Traefik #1   │  │ Traefik #2   │  │ Traefik #3   │      │
-│  │ (Production) │  │ (Staging)    │  │ (Development)│      │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘      │
+│                     Traefik Instances                       │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
+│  │ Traefik #1   │  │ Traefik #2   │  │ Traefik #3   │       │
+│  │ (Production) │  │ (Staging)    │  │ (Development)│       │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘       │
 │         │ Logs            │ Logs            │ Logs          │
 └─────────┼─────────────────┼─────────────────┼───────────────┘
           │                 │                 │
           ▼                 ▼                 ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                    Agent Layer                               │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │ Agent #1     │  │ Agent #2     │  │ Agent #3     │      │
-│  │ Port: 5000   │  │ Port: 5001   │  │ Port: 5002   │      │
-│  │ • Log Parser │  │ • Log Parser │  │ • Log Parser │      │
-│  │ • GeoIP      │  │ • GeoIP      │  │ • GeoIP      │      │
-│  │ • Metrics    │  │ • Metrics    │  │ • Metrics    │      │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘      │
+│                    Agent Layer                              │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
+│  │ Agent #1     │  │ Agent #2     │  │ Agent #3     │       │
+│  │ Port: 5000   │  │ Port: 5001   │  │ Port: 5002   │       │
+│  │ • Log Parser │  │ • Log Parser │  │ • Log Parser │       │
+│  │ • GeoIP      │  │ • GeoIP      │  │ • GeoIP      │       │
+│  │ • Metrics    │  │ • Metrics    │  │ • Metrics    │       │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘       │
 └─────────┼─────────────────┼─────────────────┼───────────────┘
           │ REST API        │ REST API        │ REST API
           └─────────────────┴─────────────────┴──────┐
-                                                      │
-                                                      ▼
+                                                     │
+                                                     ▼
                                           ┌─────────────────────┐
                                           │  Dashboard Web UI   │
                                           │                     │
