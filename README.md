@@ -15,6 +15,7 @@ A comprehensive analytics platform for Traefik access logs with three deployment
 
 ---
 
+
 ##  Table of Contents
 
 - [Overview](#overview)
@@ -30,6 +31,8 @@ A comprehensive analytics platform for Traefik access logs with three deployment
 - [Troubleshooting](#troubleshooting)
 
 ---
+
+## **MIGRATION GUIDE from V1 to V2**: [./docs/MigrationV1toV2.md](./docs/MigrationV1toV2.md)
 
 ##  Overview
 
