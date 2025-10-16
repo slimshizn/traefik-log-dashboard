@@ -153,7 +153,7 @@ open http://localhost:3000
 services:
   # Backend Agent - Parses logs and exposes API
   traefik-agent:
-    image: hhftechnology/traefik-log-dashboard-agent:dev-agent
+    image: hhftechnology/traefik-log-dashboard-agent:latest
     container_name: traefik-log-dashboard-agent
     restart: unless-stopped
     ports:
@@ -197,7 +197,7 @@ services:
 
   # Frontend Dashboard - Web UI
   traefik-dashboard:
-    image: hhftechnology/traefik-log-dashboard:dev-agent
+    image: hhftechnology/traefik-log-dashboard:latest
     container_name: traefik-log-dashboard
     restart: unless-stopped
     ports:
@@ -243,7 +243,7 @@ Create a `docker-compose.multi-agent.yml`:
 services:
   # Production Agent
   traefik-agent-prod:
-    image: hhftechnology/traefik-log-dashboard-agent:dev-agent
+    image: hhftechnology/traefik-log-dashboard-agent:latest
     container_name: traefik-agent-prod
     ports:
       - "5000:5000"
@@ -259,7 +259,7 @@ services:
 
   # Staging Agent
   traefik-agent-staging:
-    image: hhftechnology/traefik-log-dashboard-agent:dev-agent
+    image: hhftechnology/traefik-log-dashboard-agent:latest
     container_name: traefik-agent-staging
     ports:
       - "5001:5000"
@@ -274,7 +274,7 @@ services:
 
   # Development Agent
   traefik-agent-dev:
-    image: hhftechnology/traefik-log-dashboard-agent:dev-agent
+    image: hhftechnology/traefik-log-dashboard-agent:latest
     container_name: traefik-agent-dev
     ports:
       - "5002:5000"
@@ -288,7 +288,7 @@ services:
 
   # Single Dashboard
   traefik-dashboard:
-    image: hhftechnology/traefik-log-dashboard:dev-agent
+    image: hhftechnology/traefik-log-dashboard:latest
     container_name: traefik-dashboard
     ports:
       - "3000:3000"
@@ -1017,7 +1017,7 @@ Position tracking is stored in the `/data` volume.
 
 ---
 
-## ⚙️ Configuration
+##  Configuration
 
 ### Agent Environment Variables
 
@@ -1080,7 +1080,7 @@ accessLog:
 
 ---
 
-## 🚀 Performance
+##  Performance
 
 ### Benchmarks
 
@@ -1117,7 +1117,7 @@ accessLog:
 
 ---
 
-## 🔧 Troubleshooting
+##  Troubleshooting
 
 ### Common Issues
 
@@ -1272,13 +1272,13 @@ Contributions are welcome! Please read our [Contributing Guide](./CONTRIBUTING.m
 
 ---
 
-## 📝 License
+##  License
 
 This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
 
 ---
 
-## 🙏 Acknowledgments
+##  Acknowledgments
 
 - [Traefik](https://traefik.io/) - Excellent cloud-native reverse proxy
 - [Next.js](https://nextjs.org/) - Powerful React framework
