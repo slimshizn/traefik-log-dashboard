@@ -1,4 +1,3 @@
-// dashboard/app/api/logs/access/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { getSelectedAgent, getAgentById } from '@/lib/db/database';
 
@@ -11,9 +10,8 @@ export async function GET(request: NextRequest) {
     const position = searchParams.get('position') || '-2';
     const lines = searchParams.get('lines') || '1000';
     const tail = searchParams.get('tail') || 'false';
-    const agentId = searchParams.get('agentId'); // Optional: specify agent ID
+    const agentId = searchParams.get('agentId');
 
-    // Get agent config - either specified or selected
     let agent;
     if (agentId) {
       agent = getAgentById(agentId);
