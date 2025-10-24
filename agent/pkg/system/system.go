@@ -45,21 +45,12 @@ type MemoryStats struct {
 	UsedPercent float64 `json:"used_percent"`
 }
 
-// DiskStats represents aggregated disk statistics with percentage
+// DiskStats represents root disk statistics with percentage
 type DiskStats struct {
 	Total       uint64  `json:"total"`
 	Used        uint64  `json:"used"`
 	Free        uint64  `json:"free"`
 	UsedPercent float64 `json:"used_percent"`
-}
-
-// DiskInfo represents individual disk information (internal use)
-type DiskInfo struct {
-	Filesystem string `json:"filesystem"`
-	Size       uint64 `json:"size"`
-	Used       uint64 `json:"used"`
-	Free       uint64 `json:"free"`
-	MountedOn  string `json:"mountedOn"`
 }
 
 func MeasureSystem() (SystemInfo, error) {
@@ -340,123 +331,32 @@ func getMemoryStats() (MemoryStats, error) {
 	}, nil
 }
 
+// Updated to report only root (/) filesystem usage for consistent "Disk Usage" metric
 func getDiskStats() (DiskStats, error) {
-	disks, err := getDiskInfo()
+	usage, err := disk.Usage("/")
 	if err != nil {
-		return DiskStats{}, err
-	}
-
-	if len(disks) == 0 {
-		return DiskStats{}, fmt.Errorf("no disk information available")
-	}
-
-	// Aggregate all disk stats
-	var totalSize, totalUsed, totalFree uint64
-	for _, disk := range disks {
-		totalSize += disk.Size
-		totalUsed += disk.Used
-		totalFree += disk.Free
+		logger.Log.Printf("Error getting root disk usage: %v", err)
+		return DiskStats{}, fmt.Errorf("failed to get root disk usage: %w", err)
 	}
 
 	// Calculate used percentage
 	usedPercent := 0.0
-	if totalSize > 0 {
-		usedPercent = (float64(totalUsed) / float64(totalSize)) * 100.0
+	if usage.Total > 0 {
+		usedPercent = (float64(usage.Used) / float64(usage.Total)) * 100.0
 	}
+
+	logger.Log.Printf("Root disk stats: total=%.2f GB, used=%.2f GB, free=%.2f GB, percent=%.1f%%",
+		float64(usage.Total)/1024/1024/1024,
+		float64(usage.Used)/1024/1024/1024,
+		float64(usage.Free)/1024/1024/1024,
+		usedPercent)
 
 	return DiskStats{
-		Total:       totalSize,
-		Used:        totalUsed,
-		Free:        totalFree,
+		Total:       usage.Total,
+		Used:        usage.Used,
+		Free:        usage.Free,
 		UsedPercent: parseFloat(usedPercent, 1),
 	}, nil
-}
-
-// FIX BUG #1: Filter pseudo filesystems and RAM disks
-func getDiskInfo() ([]DiskInfo, error) {
-	var disks []DiskInfo
-
-	partitions, err := disk.Partitions(false)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, partition := range partitions {
-		// Skip pseudo filesystems and RAM disks
-		if shouldSkipPartition(partition) {
-			logger.Log.Printf("Skipping partition: %s (type: %s, mount: %s)", 
-				partition.Device, partition.Fstype, partition.Mountpoint)
-			continue
-		}
-
-		usage, err := disk.Usage(partition.Mountpoint)
-		if err != nil {
-			logger.Log.Printf("Error getting disk usage for %s: %v", partition.Mountpoint, err)
-			continue
-		}
-
-		logger.Log.Printf("Including partition: %s (type: %s, size: %.2f GB)", 
-			partition.Device, partition.Fstype, float64(usage.Total)/1024/1024/1024)
-
-		disks = append(disks, DiskInfo{
-			Filesystem: partition.Device,
-			Size:       usage.Total,
-			Used:       usage.Used,
-			Free:       usage.Free,
-			MountedOn:  partition.Mountpoint,
-		})
-	}
-
-	return disks, nil
-}
-
-// shouldSkipPartition determines if a partition should be excluded from disk stats
-func shouldSkipPartition(partition disk.PartitionStat) bool {
-	// Skip common pseudo filesystems
-	pseudoFsTypes := map[string]bool{
-		"tmpfs":      true,
-		"devtmpfs":   true,
-		"devfs":      true,
-		"sysfs":      true,
-		"proc":       true,
-		"squashfs":   true,
-		"iso9660":    true,
-		"overlay":    true,
-		"aufs":       true,
-		"cgroup":     true,
-		"cgroup2":    true,
-		"pstore":     true,
-		"bpf":        true,
-		"tracefs":    true,
-		"debugfs":    true,
-		"mqueue":     true,
-		"hugetlbfs":  true,
-		"fusectl":    true,
-		"configfs":   true,
-		"securityfs": true,
-		"ramfs":      true,
-	}
-
-	if pseudoFsTypes[partition.Fstype] {
-		return true
-	}
-
-	// Skip zram (compressed RAM) devices
-	if strings.HasPrefix(partition.Device, "/dev/zram") {
-		return true
-	}
-
-	// Skip loop devices (often used for snaps)
-	if strings.HasPrefix(partition.Device, "/dev/loop") {
-		return true
-	}
-
-	// Skip RAM disks
-	if strings.HasPrefix(partition.Device, "/dev/ram") {
-		return true
-	}
-
-	return false
 }
 
 func getUptime() (int64, error) {
